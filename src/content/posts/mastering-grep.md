@@ -1,5 +1,5 @@
 ---
-title: "Old Mastering Grep"
+title: "Mastering Grep: The Time-Saving Tool for Text Search and Manipulation"
 date: 2024-07-11T05:00:00Z
 # image: /images/posts/post-2.jpg
 image: /images/posts/grep-1.jpg
