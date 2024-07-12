@@ -1,7 +1,7 @@
 {
   "site": {
-    "title": "Hydrogen Astro",
-    "base_url": "https://hydrogen-astro.vercel.app",
+    "title": "Runtime Ready",
+    "base_url": "https://runtimeready.com",
     "base_path": "/",
     "trailing_slash": false,
     "favicon": "/images/ghetto_headshot_cropped.jpg"
@@ -15,11 +15,11 @@
     "name": "Aidan Arnold",
     "image": "/images/ghetto_headshot_tall.jpg",
     "designation": "Full stack developer",
-    "bio": "A Full Stack Front-end Developer based in Tampa, FL. Meticulous web developer with over 6 years of front end experience and passion for responsive and dynamic web app design."
+    "bio": "A Full Stack Developer based in Tampa, FL. Meticulous web developer with over 6 years of front end experience and passion for responsive and dynamic web app design."
   },
   "params": {
     "contact_form_action": "#",
-    "copyright": "Copyright © 2024 a theme by [statichunt](https://statichunt.com)"
+    "copyright": "Copyright © 2024 a theme by [gmander](https://github.com/Gmander.com)"
   },
   "disqus": {
     "enable": true,
@@ -27,7 +27,7 @@
     "settings": {}
   },
   "metadata": {
-    "meta_author": "Statichunt",
+    "meta_author": "Gmander",
     "meta_image": "/images/og-image.png",
     "meta_description": "astro and tailwind boilerplate"
   }

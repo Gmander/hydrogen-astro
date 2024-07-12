@@ -48,8 +48,20 @@ h6,
 b,
 strong {
   @apply font-semibold;
+  color: rgb(138, 92, 245) !important;
 }
 
 code {
   @apply after:border-none;
+  background-color: black;
+  color: yellowgreen !important;
+  padding: 0 !important;
+}
+
+em {
+  color: yellow !important;
+}
+
+a {
+  text-decoration: none !important;
 }
