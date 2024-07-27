@@ -1,5 +1,5 @@
 ---
-title: "Automating Instagram Posts with Selenium and MidJourney"
+title: "Aviation Horses - Automating Instagram Posts with Selenium and MidJourney"
 date: 2024-07-11T05:00:00Z
 # image: /images/posts/post-2.jpg
 image: /images/posts/developer_white_sweatshirt.png
@@ -7,11 +7,13 @@ categories:
    - Programming
    - Automation
    - Github
+   - Project
 
-draft: true
+draft: false
+# draft: true
 ---
 
-## Automating Instagram Posts with Selenium and MidJourney
+<!-- ## Aviation Horses - Automating Instagram Posts with Selenium and MidJourney -->
 
 ### Introduction
 
@@ -156,5 +158,6 @@ Happy coding! 🚀
 For further reading, check out the following links:
 - [Selenium Documentation](https://www.selenium.dev/documentation/en/)
 - [MidJourney API](https://midjourney.com/api/)
+- Check out the [GitHub repository](https://github.com/Gmander/aviation-horses)
 
 Let’s keep innovating and automating! 🌟
