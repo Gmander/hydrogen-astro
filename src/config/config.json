@@ -4,7 +4,7 @@
     "base_url": "https://runtimeready.com",
     "base_path": "/",
     "trailing_slash": false,
-    "favicon": "/images/headshot_river.jpg"
+    "favicon": "/images/headshot_river_crop2.jpg"
   },
   "settings": {
     "pagination": 6,
@@ -13,7 +13,7 @@
   },
   "profile": {
     "name": "Aidan Arnold",
-    "image": "/images/headshot_river.jpg",
+    "image": "/images/headshot_river_crop2.jpg",
     "designation": "Full stack developer",
     "bio": "Meticulous web developer with over 6 years of front end experience and passion for responsive and dynamic web app design."
   },
