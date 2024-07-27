@@ -6,7 +6,7 @@ image: /images/posts/grep-1.jpg
 categories:
    - Programming
 
-draft: false
+draft: true
 ---
 
 <!-- 870 X 580 -->
