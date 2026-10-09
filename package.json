@@ -4,7 +4,7 @@
   "description": "Astro and Tailwindcss Personal Blog Starter",
   "author": "statichunt",
   "license": "MIT",
-  "packageManager": "yarn@1.22.19",
+  "packageManager": "pnpm@8.15.9",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
