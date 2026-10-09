@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#f8f7f2" />
+  <title>Riley · Little moments</title>
+  <link rel="stylesheet" href="/riley/style.css" />
+  <script is:inline src="/riley/app.js" defer></script>
+</head>
+<body>
+  <div class="demo-bar"><span class="demo-dot"></span> Interactive proposal <span class="divider">/</span> Sample data · changes reset on refresh</div>
+  <div class="shell">
+    <header class="masthead">
+      <a class="brand" href="/riley" aria-label="Riley home"><span class="flower" aria-hidden="true">✳</span> riley<span class="brand-dot">.</span></a>
+      <span class="masthead-note">A little record of the everyday.</span>
+      <button class="text-button" id="reset-demo">Reset demo <span aria-hidden="true">↻</span></button>
+    </header>
+    <main>
+      <section class="intro">
+        <div><p class="eyebrow">LITTLE MOMENTS, ALL TOGETHER</p><h1>Riley’s day<span class="brand-dot">.</span></h1><p class="subtitle">One less thing to keep in your head.</p></div>
+        <div class="date-nav"><button id="previous-day" class="icon-button" aria-label="Previous day">←</button><div><strong id="day-label">Today</strong><span id="date-label"></span></div><button id="next-day" class="icon-button" aria-label="Next day">→</button></div>
+      </section>
+      <section aria-labelledby="quick-title" class="quick-section">
+        <div class="section-caption"><h2 id="quick-title">Record a moment</h2><span>Pick an event. Add the details.</span></div>
+        <div class="quick-grid">
+          <button class="quick-card feed" data-add="feed"><span class="event-icon" aria-hidden="true">♡</span><span><strong>Feed</strong><small>Breast or bottle</small></span><span class="plus" aria-hidden="true">+</span></button>
+          <button class="quick-card wee" data-add="wee"><span class="event-icon droplet" aria-hidden="true"></span><span><strong>Wee</strong><small>A wet nappy</small></span><span class="plus" aria-hidden="true">+</span></button>
+          <button class="quick-card poo" data-add="poo"><span class="event-icon" aria-hidden="true">≋</span><span><strong>Poo</strong><small>Dirty, or both</small></span><span class="plus" aria-hidden="true">+</span></button>
+        </div>
+      </section>
+      <div class="main-grid">
+        <section class="journal" aria-labelledby="timeline-title">
+          <div class="journal-heading"><div><p class="eyebrow">THE LITTLE DETAILS</p><h2 id="timeline-title">Today’s timeline</h2></div><span class="count-pill" id="event-count"></span></div>
+          <div class="filters" role="group" aria-label="Filter timeline"><button class="active" data-filter="all" aria-pressed="true">Everything</button><button data-filter="feed" aria-pressed="false">Feeds</button><button data-filter="wee" aria-pressed="false">Wees</button><button data-filter="poo" aria-pressed="false">Poos</button></div>
+          <ol id="timeline" class="timeline"></ol>
+          <div id="empty" class="empty" hidden><span aria-hidden="true">✳</span><h3>A little space for the day.</h3><p>No matching moments yet. Add one above.</p></div>
+          <p class="timeline-foot">Tap any moment to edit its details.</p>
+        </section>
+        <aside>
+          <section class="summary-card" aria-labelledby="summary-title"><div class="summary-top"><h2 id="summary-title">At a glance</h2><span aria-hidden="true">☀</span></div><p class="summary-subtitle" id="summary-period">Today so far</p><div id="summary"></div><div class="last-feed"><span>Latest feed this day</span><strong id="last-feed">—</strong></div></section>
+          <section class="note-card"><span class="note-flower" aria-hidden="true">✳</span><p>Small moments.<br />A clearer picture.</p><span>For the “when was the last…?”<br />and the middle-of-the-night handovers.</span></section>
+        </aside>
+      </div>
+      <footer><span>Made for your little team <span aria-hidden="true">♡</span></span><span>Design preview · no shared storage yet</span></footer>
+    </main>
+  </div>
+  <dialog id="entry-dialog" aria-labelledby="dialog-title">
+    <form id="entry-form">
+      <div class="dialog-heading"><div><p class="eyebrow">A LITTLE MOMENT</p><h2 id="dialog-title">Record a feed</h2></div><button type="button" class="icon-button" id="close-dialog" aria-label="Close">×</button></div>
+      <input type="hidden" id="entry-id" />
+      <label>What happened?<select id="entry-type"><option value="feed">Feed</option><option value="wee">Wee</option><option value="poo">Poo</option><option value="both">Wee + poo</option></select></label>
+      <div id="feed-fields"><label>Feed type<select id="feed-method"><option value="breast">Breast</option><option value="bottle">Bottle</option></select></label><div class="field-pair" id="breast-fields"><label>Side<select id="feed-side"><option>Left</option><option>Right</option><option>Both</option><option value="">Not recorded</option></select></label><label>Minutes (optional)<input id="feed-duration" type="number" min="1" max="300" step="1" inputmode="numeric" /></label></div><label id="bottle-fields" hidden>Amount in ml (optional)<input id="feed-amount" type="number" min="1" max="2000" step="1" inputmode="numeric" /></label></div>
+      <label>When?<input id="entry-time" type="datetime-local" required /></label>
+      <label>Recorded by<select id="entry-person"><option>Aidan</option><option>Kane</option></select></label>
+      <label>A note (optional)<textarea id="entry-note" rows="2" maxlength="300" placeholder="Anything you’d like to remember"></textarea></label>
+      <p class="form-hint">Demo only. Entries disappear when you refresh.</p>
+      <div class="dialog-actions"><button type="button" id="delete-entry" class="delete-button" hidden>Delete</button><button type="button" id="cancel-dialog" class="secondary-button">Cancel</button><button type="submit" class="primary-button">Save moment <span aria-hidden="true">↗</span></button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" hidden><span id="toast-text"></span><button id="undo" hidden>Undo</button></div>
+  <noscript>This interactive proposal needs JavaScript enabled. No real records are stored.</noscript>
+</body>
+</html>
