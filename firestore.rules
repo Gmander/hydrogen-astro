@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isRileyMember() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/households/riley/members/$(request.auth.uid));
+    }
+
+    function validEvent(data) {
+      return data.keys().hasOnly([
+          'type', 'time', 'person', 'note', 'method', 'side', 'duration', 'amount',
+          'createdBy', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasAll(['type', 'time', 'person', 'note', 'createdBy', 'createdAt', 'updatedAt'])
+        && data.type in ['feed', 'wee', 'poo', 'both']
+        && data.time is timestamp
+        && data.person is string
+        && data.person.size() <= 80
+        && data.note is string
+        && data.note.size() <= 300
+        && data.createdBy is string
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp
+        && (!('method' in data) || data.method in ['breast', 'bottle'])
+        && (!('side' in data) || data.side in ['', 'Left', 'Right', 'Both'])
+        && (!('duration' in data) || data.duration is string)
+        && (!('amount' in data) || data.amount is string);
+    }
+
+    match /households/riley/members/{uid} {
+      // A signed-in user can check their own membership document, including when it is absent.
+      allow get: if (signedIn() && request.auth.uid == uid) || isRileyMember();
+      allow list: if isRileyMember();
+      // Household membership is managed by the owner in the Firebase Console for this first version.
+      allow create, update, delete: if false;
+    }
+
+    match /households/riley/events/{eventId} {
+      allow read: if isRileyMember();
+      allow create: if isRileyMember()
+        && validEvent(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isRileyMember()
+        && validEvent(request.resource.data)
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isRileyMember();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

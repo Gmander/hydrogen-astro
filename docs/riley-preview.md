@@ -1,12 +1,12 @@
-# Riley tracker proposal
+# Riley tracker
 
-Updated: 2026-10-09. An interactive design proposal, not a live record system.
+Updated: 2026-10-09. The production site remains the sample-data demo until Firebase is configured; the auth and Firestore implementation is under development on `codex/riley-firebase-auth`.
 
 ## Scope
 
 Route: `/riley` (this site's Astro config uses `trailingSlash: never`). Source: `src/pages/riley.astro`, `public/riley/app.js`, `public/riley/style.css`.
 
-The screen supports breast/bottle feeds, wet/dirty/combined nappies, caregiver, timestamps, optional notes, day navigation, category filters, edit, delete and undo. Combined nappies count once in the timeline and once in each relevant summary. Browser-local calendar days are used. All entries are in memory; refresh restores synthetic examples. No network requests, login, local storage, or real baby records are involved in the tracker. It is marked noindex; this is not access control.
+The screen supports breast/bottle feeds, wet/dirty/combined nappies, caregiver, timestamps, optional notes, day navigation, category filters, edit, delete and undo. Combined nappies count once in the timeline and once in each relevant summary. Browser-local calendar days are used. When Firebase is configured, email-link accounts with a Firestore household membership can access shared events. Without Firebase configuration, the route displays only synthetic sample data. It is marked noindex; this is not access control.
 
 ## Local workflow
 
@@ -34,6 +34,6 @@ To complete the remote flow: publish an explicitly selected branch/PR preview; v
 
 Because this repository is a fork, explicitly target `Gmander/hydrogen-astro:main` when creating PRs. The generic new-PR link can default to the upstream `statichunt` repository. Use the same-repository compare page and verify the base owner before submitting.
 
-## Next iteration
+## Firebase setup
 
-Review layout and entry details with Aidan first. Persistent cross-device storage and authenticated household access are intentionally deferred. A future implementation must replace the in-memory data boundary, preserve event semantics, and test access isolation and concurrent edits.
+See [Riley Firebase setup](riley-firebase-setup.md) for project setup, environment variables, email-link authentication, membership bootstrap, and Firestore rules. No Firebase project or real user records are configured by this repository yet.
