@@ -7,15 +7,33 @@
   <meta name="theme-color" content="#f8f7f2" />
   <title>Riley · Little moments</title>
   <link rel="stylesheet" href="/riley/style.css" />
-  <script is:inline src="/riley/app.js" defer></script>
+  <script src="../scripts/riley.js"></script>
 </head>
 <body>
-  <div class="demo-bar"><span class="demo-dot"></span> Interactive proposal <span class="divider">/</span> Sample data · changes reset on refresh</div>
-  <div class="shell">
+  <div class="demo-bar" id="app-status"><span class="demo-dot"></span><span id="app-status-text">Loading Riley…</span></div>
+  <section class="auth-panel" id="sign-in-panel" aria-labelledby="sign-in-title" hidden>
+    <p class="eyebrow">A LITTLE MOMENT</p>
+    <h1 id="sign-in-title">Welcome back<span class="brand-dot">.</span></h1>
+    <p class="subtitle">Sign in with a link sent to your email. This browser will stay signed in.</p>
+    <form id="sign-in-form">
+      <label for="auth-email">Email address</label>
+      <input id="auth-email" name="email" type="email" autocomplete="email" required placeholder="you@example.com" />
+      <button class="primary-button" id="sign-in-submit" type="submit">Send sign-in link <span aria-hidden="true">↗</span></button>
+    </form>
+    <p class="form-hint" id="auth-message" role="status" aria-live="polite">Use the email address assigned to your Riley account.</p>
+    <div class="access-pending" id="access-pending" hidden>
+      <strong>This account hasn’t been added to Riley yet.</strong>
+      <span>Share this account ID with the household owner to finish setup.</span>
+      <code id="auth-uid"></code>
+      <button class="secondary-button" type="button" id="copy-auth-uid">Copy account ID</button>
+    </div>
+  </section>
+  <div class="shell" id="tracker-app" hidden>
     <header class="masthead">
       <a class="brand" href="/riley" aria-label="Riley home"><span class="flower" aria-hidden="true">✳</span> riley<span class="brand-dot">.</span></a>
       <span class="masthead-note">A little record of the everyday.</span>
-      <button class="text-button" id="reset-demo">Reset demo <span aria-hidden="true">↻</span></button>
+      <div class="account-controls" id="account-controls" hidden><span id="account-name"></span><button class="text-button" id="sign-out" type="button">Sign out</button></div>
+      <button class="text-button" id="reset-demo" type="button" hidden>Reset demo <span aria-hidden="true">↻</span></button>
     </header>
     <main>
       <section class="intro">
@@ -43,7 +61,7 @@
           <section class="note-card"><span class="note-flower" aria-hidden="true">✳</span><p>Small moments.<br />A clearer picture.</p><span>For the “when was the last…?”<br />and the middle-of-the-night handovers.</span></section>
         </aside>
       </div>
-      <footer><span>Made for your little team <span aria-hidden="true">♡</span></span><span>Design preview · no shared storage yet</span></footer>
+      <footer><span>Made for your little team <span aria-hidden="true">♡</span></span><span id="storage-note">Design preview · no shared storage yet</span></footer>
     </main>
   </div>
   <dialog id="entry-dialog" aria-labelledby="dialog-title">
@@ -53,9 +71,9 @@
       <label>What happened?<select id="entry-type"><option value="feed">Feed</option><option value="wee">Wee</option><option value="poo">Poo</option><option value="both">Wee + poo</option></select></label>
       <div id="feed-fields"><label>Feed type<select id="feed-method"><option value="breast">Breast</option><option value="bottle">Bottle</option></select></label><div class="field-pair" id="breast-fields"><label>Side<select id="feed-side"><option>Left</option><option>Right</option><option>Both</option><option value="">Not recorded</option></select></label><label>Minutes (optional)<input id="feed-duration" type="number" min="1" max="300" step="1" inputmode="numeric" /></label></div><label id="bottle-fields" hidden>Amount in ml (optional)<input id="feed-amount" type="number" min="1" max="2000" step="1" inputmode="numeric" /></label></div>
       <label>When?<input id="entry-time" type="datetime-local" required /></label>
-      <label>Recorded by<select id="entry-person"><option>Aidan</option><option>Kane</option></select></label>
+      <label>Caregiver<select id="entry-person"><option>Aidan</option><option>Kane</option></select></label>
       <label>A note (optional)<textarea id="entry-note" rows="2" maxlength="300" placeholder="Anything you’d like to remember"></textarea></label>
-      <p class="form-hint">Demo only. Entries disappear when you refresh.</p>
+      <p class="form-hint" id="entry-hint">Demo only. Entries disappear when you refresh.</p>
       <div class="dialog-actions"><button type="button" id="delete-entry" class="delete-button" hidden>Delete</button><button type="button" id="cancel-dialog" class="secondary-button">Cancel</button><button type="submit" class="primary-button">Save moment <span aria-hidden="true">↗</span></button></div>
     </form>
   </dialog>
