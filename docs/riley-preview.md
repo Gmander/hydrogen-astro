@@ -1,12 +1,12 @@
 # Riley tracker
 
-Updated: 2026-10-09. The production site remains the sample-data demo until Firebase is configured; the auth and Firestore implementation is under development on `codex/riley-firebase-auth`.
+Updated: 2026-10-10. Production is on Firebase/Firestore (commit `d8902bf`). The current local changes add step-based feed and diaper entry plus sleep sessions; they are not deployed yet.
 
 ## Scope
 
-Route: `/riley` (this site's Astro config uses `trailingSlash: never`). Source: `src/pages/riley.astro`, `public/riley/app.js`, `public/riley/style.css`.
+Route: `/riley` (this site's Astro config uses `trailingSlash: never`). Active source: `src/pages/riley.astro`, `src/scripts/riley.js`, `public/riley/style.css`.
 
-The screen supports breast/bottle feeds, wet/dirty/combined nappies, caregiver, timestamps, optional notes, day navigation, category filters, edit, delete and undo. Combined nappies count once in the timeline and once in each relevant summary. Browser-local calendar days are used. When Firebase is configured, email-link accounts with a Firestore household membership can access shared events. Without Firebase configuration, the route displays only synthetic sample data. It is marked noindex; this is not access control.
+The screen supports step-based breast/bottle feeds, wet/dirty/combined diapers with separate wee/poo sizes, quick-start and manual sleep sessions, caregiver, timestamps, optional notes, day navigation, category filters, edit, delete and undo. Combined diapers count once in the timeline and once in each relevant summary. Sleep sessions count on each browser-local calendar day they overlap. When Firebase is configured, email-link accounts with a Firestore household membership can access shared events. Without Firebase configuration, the route displays only synthetic sample data. It is marked noindex; this is not access control.
 
 ## Local workflow
 
@@ -26,7 +26,7 @@ Open http://127.0.0.1:4321/riley. A dev loop can use `pnpm dev --host 127.0.0.1 
 - The local HEAD matched remote default HEAD `55cf8e0d0140a992501e8ff460e96a7dab484852` on 2026-10-09.
 - The signed-in Netlify dashboard confirms this repository as the source of runtimeready.com.
 - `netlify.toml` specifies `pnpm build`, output `dist`, Node 20. No local GitHub Actions workflow exists.
-- Full build and local browser checks are recorded in Command Center's Riley project context. Preview PR: https://github.com/Gmander/hydrogen-astro/pull/1. Production has not been merged or redeployed.
+- PR #2 merged to `main`; Netlify published production commit `d8902bf`. Firebase sign-in and Firestore CRUD were verified in the deploy preview. Production-origin session verification and adding the second parent remain pending.
 
 Authenticated Netlify inspection on 2026-10-09 confirmed this repository, production branch `main`, auto publishing, build `pnpm build` to `dist`, and Deploy Previews for PRs against `main`. Branch deploys are disabled apart from production. Published commit is `3737267`, two config commits behind current HEAD (build command and a redirect change). Dashboard Node setting says 18.x while `netlify.toml` says 20; inspect the effective version in the first preview build log.
 
@@ -36,4 +36,4 @@ Because this repository is a fork, explicitly target `Gmander/hydrogen-astro:mai
 
 ## Firebase setup
 
-See [Riley Firebase setup](riley-firebase-setup.md) for project setup, environment variables, email-link authentication, membership bootstrap, and Firestore rules. No Firebase project or real user records are configured by this repository yet.
+See [Riley Firebase setup](riley-firebase-setup.md) for project setup, environment variables, email-link authentication, membership bootstrap, and Firestore rules. Firestore rules need to be updated with the new event fields before these changes can save to the configured Firebase project.

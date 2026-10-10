@@ -13,12 +13,14 @@ service cloud.firestore {
 
     function validEvent(data) {
       return data.keys().hasOnly([
-          'type', 'time', 'person', 'note', 'method', 'side', 'duration', 'amount',
+          'type', 'time', 'endTime', 'person', 'note', 'method', 'side', 'startedSide',
+          'duration', 'leftMinutes', 'rightMinutes', 'amount', 'wetSize', 'stoolSize',
           'createdBy', 'createdAt', 'updatedAt'
         ])
         && data.keys().hasAll(['type', 'time', 'person', 'note', 'createdBy', 'createdAt', 'updatedAt'])
-        && data.type in ['feed', 'wee', 'poo', 'both']
+        && data.type in ['feed', 'wee', 'poo', 'both', 'sleep']
         && data.time is timestamp
+        && (!('endTime' in data) || data.endTime == null || data.endTime is timestamp)
         && data.person is string
         && data.person.size() <= 80
         && data.note is string
@@ -28,8 +30,13 @@ service cloud.firestore {
         && data.updatedAt is timestamp
         && (!('method' in data) || data.method in ['breast', 'bottle'])
         && (!('side' in data) || data.side in ['', 'Left', 'Right', 'Both'])
-        && (!('duration' in data) || data.duration is string)
-        && (!('amount' in data) || data.amount is string);
+        && (!('startedSide' in data) || data.startedSide in ['', 'Left', 'Right'])
+        && (!('duration' in data) || data.duration is string || data.duration is int || data.duration is float)
+        && (!('leftMinutes' in data) || ((data.leftMinutes is int || data.leftMinutes is float) && data.leftMinutes >= 1 && data.leftMinutes <= 300))
+        && (!('rightMinutes' in data) || ((data.rightMinutes is int || data.rightMinutes is float) && data.rightMinutes >= 1 && data.rightMinutes <= 300))
+        && (!('amount' in data) || data.amount is string || data.amount is int || data.amount is float)
+        && (!('wetSize' in data) || data.wetSize in ['small', 'medium', 'large'])
+        && (!('stoolSize' in data) || data.stoolSize in ['small', 'medium', 'large']);
     }
 
     match /households/riley/members/{uid} {

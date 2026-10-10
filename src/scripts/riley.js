@@ -27,12 +27,15 @@ const $ = (id) => document.getElementById(id);
 const localDay = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const localInput = (date) => `${localDay(date)}T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 const timeLabel = (date) => new Date(date).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-const names = { feed: "Feed", wee: "Wee", poo: "Poo", both: "Wee + poo" };
-const symbols = { feed: "♡", wee: "♧", poo: "≋", both: "≋" };
+const names = { feed: "Feed", wee: "Wee", poo: "Poo", both: "Wee + poo", sleep: "Sleep" };
+const symbols = { feed: "♡", wee: "♧", poo: "≋", both: "≋", sleep: "☾" };
 const includes = (entry, type) => entry.type === type || (entry.type === "both" && (type === "wee" || type === "poo"));
+const sizeLabel = (size) => ({ small: "Small", medium: "Medium", large: "Large" })[size] || "";
 let selectedDay = localDay(new Date());
 let filter = "all";
 let entries = [];
+let sleepSessions = [];
+let activeSleep = null;
 let undoAction = null;
 let toastTimer;
 let auth;
@@ -42,7 +45,9 @@ let members = [];
 let stopEntries;
 let stopMembership;
 let stopMembers;
+let stopSleep;
 let demo = true;
+let wizard = null;
 
 function setStatus(message, mode = "") {
   $("app-status-text").textContent = message;
@@ -64,16 +69,41 @@ function element(tag, className, text) {
   return node;
 }
 
+function durationLabel(start, end) {
+  if (!end) return "Still asleep";
+  const elapsed = Math.max(0, new Date(end) - new Date(start));
+  const minutes = Math.round(elapsed / 60000);
+  if (elapsed > 0 && minutes === 0) return "Under 1 min";
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return hours ? `${hours}h ${remainder}m` : `${remainder} min`;
+}
+
 function detail(entry) {
   const parts = [];
   if (entry.type === "feed") {
     parts.push(entry.method === "bottle" ? "Bottle" : "Breast");
     if (entry.method === "bottle" && entry.amount) parts.push(`${entry.amount} ml`);
     if (entry.method === "breast") {
-      if (entry.side) parts.push(entry.side === "Both" ? "Both sides" : `${entry.side} side`);
-      if (entry.duration) parts.push(`${entry.duration} min`);
+      if (entry.leftMinutes || entry.rightMinutes) {
+        const sides = [];
+        if (entry.leftMinutes) sides.push(`Left ${entry.leftMinutes} min`);
+        if (entry.rightMinutes) sides.push(`Right ${entry.rightMinutes} min`);
+        parts.push(sides.join(" + "));
+        if (entry.startedSide) parts.push(`Started ${entry.startedSide}`);
+      } else {
+        if (entry.side) parts.push(entry.side === "Both" ? "Both sides" : `${entry.side} side`);
+        if (entry.duration) parts.push(`${entry.duration} min`);
+      }
     }
-  } else parts.push(entry.type === "both" ? "Wet + dirty nappy" : entry.type === "wee" ? "Wet nappy" : "Dirty nappy");
+  } else if (entry.type === "sleep") {
+    parts.push(entry.endTime ? `${timeLabel(entry.time)}–${timeLabel(entry.endTime)}` : `Started ${timeLabel(entry.time)}`);
+    parts.push(durationLabel(entry.time, entry.endTime));
+  } else {
+    parts.push(entry.type === "both" ? "Wet + dirty diaper" : entry.type === "wee" ? "Wet diaper" : "Dirty diaper");
+    if (entry.wetSize) parts.push(`Wee ${sizeLabel(entry.wetSize).toLowerCase()}`);
+    if (entry.stoolSize) parts.push(`Poo ${sizeLabel(entry.stoolSize).toLowerCase()}`);
+  }
   if (entry.person) parts.push(entry.person);
   return parts.join(" · ");
 }
@@ -87,7 +117,16 @@ function render() {
   $("next-day").disabled = selectedDay >= today;
   $("timeline-title").textContent = isToday ? "Today’s timeline" : "The day’s timeline";
   $("summary-period").textContent = isToday ? "Today so far" : date.toLocaleDateString([], { month: "long", day: "numeric" });
-  const dayEntries = entries.filter((entry) => localDay(new Date(entry.time)) === selectedDay).sort((a, b) => new Date(b.time) - new Date(a.time));
+  const dayStart = new Date(`${selectedDay}T00:00:00`);
+  const dayEnd = new Date(`${selectedDay}T00:00:00`);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  const candidates = demo ? entries : [...entries, ...sleepSessions];
+  const dayEntries = [...new Map(candidates.filter((entry) => {
+    const start = new Date(entry.time);
+    if (entry.type !== "sleep") return localDay(start) === selectedDay;
+    const end = entry.endTime ? new Date(entry.endTime) : null;
+    return start < dayEnd && (!end || end > dayStart);
+  }).map((entry) => [entry.id, entry])).values()].sort((a, b) => new Date(b.time) - new Date(a.time));
   const shown = dayEntries.filter((entry) => filter === "all" || includes(entry, filter));
   $("event-count").textContent = `${shown.length} ${shown.length === 1 ? "moment" : "moments"}`;
   document.querySelectorAll("[data-filter]").forEach((button) => {
@@ -116,44 +155,281 @@ function render() {
   });
   $("empty").hidden = shown.length > 0;
   $("summary").replaceChildren();
-  ["feed", "wee", "poo"].forEach((type) => {
+  ["feed", "wee", "poo", "sleep"].forEach((type) => {
     const row = element("div", "stat-row");
-    row.append(element("span", "", `${names[type]}s`), element("strong", "", String(dayEntries.filter((entry) => includes(entry, type)).length)));
+    const label = type === "sleep" ? "Sleep sessions" : `${names[type]}s`;
+    row.append(element("span", "", label), element("strong", "", String(dayEntries.filter((entry) => includes(entry, type)).length)));
     $("summary").append(row);
   });
   const latest = dayEntries.find((entry) => entry.type === "feed");
   $("last-feed").textContent = latest ? `${timeLabel(latest.time)} · ${latest.method === "bottle" ? "Bottle" : "Breast"}` : "No feed recorded";
+  renderSleepAction();
+}
+
+function renderSleepAction() {
+  $("sleep-action-title").textContent = activeSleep ? "Wake up" : "Sleep";
+  $("sleep-action-hint").textContent = activeSleep ? `Sleeping since ${timeLabel(activeSleep.time)}` : "Start or log sleep";
+  $("sleep-action-card").setAttribute("aria-label", activeSleep ? "Wake Riley" : "Start or log sleep");
+  $("sleep-action-card").querySelector(".plus").textContent = activeSleep ? "✓" : "+";
+}
+
+function setCaregiverOptions(selected) {
+  const select = $("entry-person");
+  const namesList = members.map((member) => member.name).filter(Boolean);
+  if (!namesList.length) namesList.push("Caregiver");
+  select.replaceChildren(...namesList.map((name) => {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name;
+    return option;
+  }));
+  if (namesList.includes(selected)) select.value = selected;
 }
 
 function syncFields() {
-  const isFeed = $("entry-type").value === "feed";
+  const type = $("entry-type").value;
+  const isFeed = type === "feed";
   const breast = $("feed-method").value === "breast";
   $("feed-fields").hidden = !isFeed;
-  $("breast-fields").hidden = !breast;
-  $("bottle-fields").hidden = breast;
-  ["feed-side", "feed-duration"].forEach((id) => ($(id).disabled = !isFeed || !breast));
-  $("feed-amount").disabled = !isFeed || breast;
-  $("dialog-title").textContent = `${$("entry-id").value ? "Edit" : "Record"} ${names[$("entry-type").value].toLowerCase()}`;
+  $("breast-fields").hidden = !isFeed || !breast;
+  $("bottle-fields").hidden = !isFeed || breast;
+  $("diaper-fields").hidden = !["wee", "poo", "both"].includes(type);
+  $("wet-size-label").hidden = !["wee", "both"].includes(type);
+  $("stool-size-label").hidden = !["poo", "both"].includes(type);
+  $("sleep-end-label").hidden = type !== "sleep";
+  $("dialog-title").textContent = `Edit ${names[type].toLowerCase()}`;
+}
+
+function defaultTime() {
+  const now = new Date();
+  return selectedDay === localDay(now) ? now : new Date(`${selectedDay}T12:00:00`);
 }
 
 function openEntry(type, entry) {
+  wizard = null;
+  $("entry-wizard").hidden = true;
+  $("entry-form").hidden = false;
   $("entry-form").reset();
   $("entry-time").setCustomValidity("");
   $("entry-id").value = entry?.id || "";
   $("entry-type").value = type;
   const now = new Date();
-  const defaultTime = selectedDay === localDay(now) ? now : new Date(`${selectedDay}T12:00:00`);
-  $("entry-time").value = localInput(entry ? new Date(entry.time) : defaultTime);
+  const time = entry?.time ? new Date(entry.time) : defaultTime();
+  $("entry-time").value = localInput(time);
   $("entry-time").max = localInput(now);
-  $("entry-person").value = entry?.person || members[0]?.name || "";
-  $("entry-note").value = entry?.note || "";
+  const startSide = entry?.startedSide || ((entry?.side === "Left" || entry?.side === "Right") ? entry.side : "");
   $("feed-method").value = entry?.method || "breast";
-  $("feed-side").value = entry?.side ?? "Left";
-  $("feed-duration").value = entry?.duration || "";
+  $("feed-started").value = startSide;
+  $("feed-left-minutes").value = entry?.leftMinutes || (entry?.side === "Left" ? entry.duration || "" : "");
+  $("feed-right-minutes").value = entry?.rightMinutes || (entry?.side === "Right" ? entry.duration || "" : "");
+  $("feed-legacy-duration").value = entry?.leftMinutes || entry?.rightMinutes || entry?.side !== "Both" ? "" : entry?.duration || "";
+  $("feed-legacy-label").hidden = !(entry?.method === "breast" && entry?.side === "Both" && entry?.duration && !entry?.leftMinutes && !entry?.rightMinutes);
   $("feed-amount").value = entry?.amount || "";
+  $("wet-size").value = entry?.wetSize || "";
+  $("stool-size").value = entry?.stoolSize || "";
+  $("sleep-end-time").value = entry?.endTime ? localInput(new Date(entry.endTime)) : "";
+  $("entry-person").value = entry?.person || currentMemberName();
+  setCaregiverOptions(entry?.person || currentMemberName());
+  $("entry-note").value = entry?.note || "";
   $("delete-entry").hidden = !entry;
   syncFields();
   $("entry-dialog").showModal();
+}
+
+function currentMemberName() {
+  return members.find((member) => member.id === currentUser?.uid)?.name || members[0]?.name || "";
+}
+
+function stepsForWizard() {
+  const state = wizard;
+  if (state.category === "feed") {
+    const steps = [
+      { key: "method", title: "What kind of feed?", kind: "choice", choices: [["breast", "Breast"], ["bottle", "Bottle"]] },
+      { key: "time", title: "What time?", kind: "time", label: "Today by default" },
+    ];
+    if (state.values.method === "breast") {
+      steps.push({ key: "side", title: "Which side?", kind: "choice", choices: [["Left", "Left"], ["Right", "Right"], ["Both", "Both"]] });
+      if (state.values.side === "Both") steps.push({ key: "startedSide", title: "Which side did Riley start on?", kind: "choice", choices: [["Left", "Left"], ["Right", "Right"]] });
+      const sides = state.values.side === "Both" ? [state.values.startedSide, state.values.startedSide === "Left" ? "Right" : "Left"] : [state.values.side];
+      sides.filter(Boolean).forEach((side) => steps.push({ key: `${side.toLowerCase()}Minutes`, title: `Minutes on the ${side.toLowerCase()}?`, kind: "number", label: "Optional", suffix: "min" }));
+    } else {
+      steps.push({ key: "amount", title: "How much?", kind: "number", label: "Bottle amount (optional)", suffix: "ml" });
+    }
+    steps.push({ key: "details", title: "Anything else?", kind: "details" });
+    return steps;
+  }
+  if (state.category === "diaper") {
+    const steps = [{ key: "type", title: "What was in the diaper?", kind: "choice", choices: [["wee", "Wee"], ["poo", "Poo"], ["both", "Both"]] }];
+    if (["wee", "both"].includes(state.values.type)) steps.push({ key: "wetSize", title: "How much wee?", kind: "choice", choices: [["small", "Small"], ["medium", "Medium"], ["large", "Large"]] });
+    if (["poo", "both"].includes(state.values.type)) steps.push({ key: "stoolSize", title: "How much poo?", kind: "choice", choices: [["small", "Small"], ["medium", "Medium"], ["large", "Large"]] });
+    steps.push({ key: "time", title: "What time?", kind: "time", label: "Today by default" }, { key: "details", title: "Anything else?", kind: "details" });
+    return steps;
+  }
+  if (state.category === "sleep") {
+    return [
+      { key: "startTime", title: "When did sleep start?", kind: "time", label: "Today by default" },
+      { key: "endTime", title: "When did Riley wake up?", kind: "time", label: "Choose the wake time" },
+      { key: "details", title: "Anything else?", kind: "details" },
+    ];
+  }
+  return [];
+}
+
+function wizardTimeDefault(key) {
+  const now = new Date();
+  if (key === "startTime" && selectedDay === localDay(now)) return new Date(now.getTime() - 45 * 60000);
+  if (key === "endTime" && selectedDay === localDay(now)) return now;
+  if (key === "endTime") return new Date(defaultTime().getTime() + 45 * 60000);
+  return defaultTime();
+}
+
+function renderWizard() {
+  const steps = stepsForWizard();
+  const step = steps[wizard.step];
+  $("dialog-title").textContent = wizard.category === "feed" ? "Record a feed" : wizard.category === "diaper" ? "Record a diaper" : "Log sleep";
+  $("wizard-progress").textContent = `STEP ${wizard.step + 1}`;
+  const content = $("wizard-content");
+  content.replaceChildren();
+  content.append(element("h3", "wizard-title", step.title));
+  if (step.kind === "choice") {
+    const choices = element("div", "wizard-choices");
+    step.choices.forEach(([value, label]) => {
+      const button = element("button", `choice-button${wizard.values[step.key] === value ? " selected" : ""}`, label);
+      button.type = "button";
+      button.setAttribute("aria-pressed", String(wizard.values[step.key] === value));
+      button.addEventListener("click", () => {
+        wizard.values[step.key] = value;
+        const newSteps = stepsForWizard();
+        wizard.step = Math.min(wizard.step + 1, newSteps.length - 1);
+        renderWizard();
+      });
+      choices.append(button);
+    });
+    content.append(choices);
+  } else if (step.kind === "time") {
+    const label = document.createElement("label");
+    label.className = "wizard-label";
+    label.textContent = step.label;
+    const input = document.createElement("input");
+    input.type = "datetime-local";
+    input.id = "wizard-input";
+    input.required = true;
+    input.max = localInput(new Date());
+    input.value = wizard.values[step.key] || localInput(wizardTimeDefault(step.key));
+    label.append(input);
+    content.append(label);
+  } else if (step.kind === "number") {
+    const label = document.createElement("label");
+    label.className = "wizard-label";
+    label.textContent = step.label;
+    const input = document.createElement("input");
+    input.type = "number";
+    input.id = "wizard-input";
+    input.min = "1";
+    input.max = step.key === "amount" ? "2000" : "300";
+    input.step = "1";
+    input.inputMode = "numeric";
+    input.placeholder = `Enter ${step.suffix}`;
+    input.value = wizard.values[step.key] || "";
+    label.append(input);
+    content.append(label);
+  } else if (step.kind === "details") {
+    const caregiverLabel = element("label", "wizard-label", "Caregiver");
+    const select = document.createElement("select");
+    select.id = "wizard-caregiver";
+    setCaregiverOptions(wizard.values.person || currentMemberName());
+    [...$("entry-person").options].forEach((option) => select.append(option.cloneNode(true)));
+    select.value = wizard.values.person || currentMemberName();
+    caregiverLabel.append(select);
+    const noteLabel = element("label", "wizard-label", "A note (optional)");
+    const note = document.createElement("textarea");
+    note.id = "wizard-note";
+    note.rows = 2;
+    note.maxLength = 300;
+    note.placeholder = "Anything you’d like to remember";
+    note.value = wizard.values.note || "";
+    noteLabel.append(note);
+    content.append(caregiverLabel, noteLabel);
+  }
+  $("wizard-back").hidden = wizard.step === 0;
+  $("wizard-next").hidden = step.kind === "choice";
+  const last = wizard.step === steps.length - 1;
+  $("wizard-next").innerHTML = last ? 'Save moment <span aria-hidden="true">↗</span>' : 'Next <span aria-hidden="true">↗</span>';
+}
+
+function openWizard(category) {
+  wizard = { category, step: 0, values: {} };
+  $("entry-form").hidden = true;
+  $("entry-wizard").hidden = false;
+  $("delete-entry").hidden = true;
+  $("entry-dialog").showModal();
+  renderWizard();
+}
+
+function collectWizardValue() {
+  const steps = stepsForWizard();
+  const step = steps[wizard.step];
+  if (step.kind === "time" || step.kind === "number") {
+    const input = $("wizard-input");
+    if (step.kind === "time" && (!input.value || !Number.isFinite(new Date(input.value).getTime()) || new Date(input.value) > new Date())) {
+      input.setCustomValidity("Choose a valid time that is not in the future.");
+      input.reportValidity();
+      return false;
+    }
+    if (step.kind === "number" && input.value && !input.checkValidity()) {
+      input.reportValidity();
+      return false;
+    }
+    wizard.values[step.key] = input.value;
+  } else if (step.kind === "details") {
+    wizard.values.person = $("wizard-caregiver").value;
+    wizard.values.note = $("wizard-note").value.trim();
+  }
+  return true;
+}
+
+function buildWizardEntry() {
+  const values = wizard.values;
+  if (wizard.category === "feed") {
+    const entry = { type: "feed", method: values.method, time: new Date(values.time), person: values.person, note: values.note || "" };
+    if (values.method === "bottle") {
+      if (values.amount) entry.amount = Number(values.amount);
+    } else {
+      entry.side = values.side;
+      if (values.side === "Both") entry.startedSide = values.startedSide;
+      const firstSide = values.side === "Both" ? values.startedSide : values.side;
+      const firstKey = `${firstSide.toLowerCase()}Minutes`;
+      const otherSide = firstSide === "Left" ? "Right" : "Left";
+      const otherKey = `${otherSide.toLowerCase()}Minutes`;
+      if (values[firstKey]) entry[ firstSide === "Left" ? "leftMinutes" : "rightMinutes" ] = Number(values[firstKey]);
+      if (values.side === "Both" && values[otherKey]) entry[ otherSide === "Left" ? "leftMinutes" : "rightMinutes" ] = Number(values[otherKey]);
+    }
+    return entry;
+  }
+  if (wizard.category === "diaper") {
+    const entry = { type: values.type, time: new Date(values.time), person: values.person, note: values.note || "" };
+    if (values.wetSize) entry.wetSize = values.wetSize;
+    if (values.stoolSize) entry.stoolSize = values.stoolSize;
+    return entry;
+  }
+  return { type: "sleep", time: new Date(values.startTime), endTime: new Date(values.endTime), person: values.person, note: values.note || "" };
+}
+
+async function saveEntry(entry, id) {
+  if (demo) {
+    const localEntry = { ...entry, time: entry.time.toISOString(), endTime: entry.endTime ? entry.endTime.toISOString() : null, id: id || crypto.randomUUID() };
+    entries = id ? entries.map((existing) => existing.id === id ? localEntry : existing) : [...entries, localEntry];
+  } else if (id) {
+    const saved = { ...entry, time: Timestamp.fromDate(entry.time), updatedAt: Timestamp.now() };
+    if (entry.endTime) saved.endTime = Timestamp.fromDate(entry.endTime);
+    else if (entry.type === "sleep") saved.endTime = null;
+    await updateDoc(doc(db, "households", "riley", "events", id), saved);
+  } else {
+    const saved = { ...entry, time: Timestamp.fromDate(entry.time), createdBy: currentUser.uid, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
+    if (entry.endTime) saved.endTime = Timestamp.fromDate(entry.endTime);
+    else if (entry.type === "sleep") saved.endTime = null;
+    await addDoc(collection(db, "households", "riley", "events"), saved);
+  }
 }
 
 function notify(message, undo) {
@@ -172,17 +448,32 @@ function seedDemo() {
   const now = new Date();
   const elapsed = now.getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const sample = [
-    { type: "feed", method: "breast", side: "Left", duration: "18", person: "Kane", note: "A quiet cuddle afterwards." },
-    { type: "wee", person: "Aidan" },
-    { type: "feed", method: "bottle", amount: "70", person: "Aidan" },
-    { type: "both", person: "Kane" },
-    { type: "wee", person: "Kane" },
-    { type: "feed", method: "breast", side: "Right", duration: "15", person: "Kane" },
+    { type: "feed", method: "breast", side: "Both", startedSide: "Left", leftMinutes: 12, rightMinutes: 8, person: "Kane", note: "A quiet cuddle afterwards." },
+    { type: "wee", wetSize: "medium", person: "Aidan" },
+    { type: "feed", method: "bottle", amount: 70, person: "Aidan" },
+    { type: "both", wetSize: "small", stoolSize: "medium", person: "Kane" },
+    { type: "sleep", endTime: null, person: "Kane" },
+    { type: "feed", method: "breast", side: "Right", rightMinutes: 15, startedSide: "Right", person: "Kane" },
   ];
-  entries = sample.map((entry, i) => ({ id: crypto.randomUUID(), note: "", ...entry, time: new Date(now.getTime() - elapsed * (0.08 + i * 0.15)).toISOString() }));
+  entries = sample.map((entry, i) => {
+    const time = new Date(now.getTime() - elapsed * (0.08 + i * 0.15));
+    const endTime = entry.type === "sleep" ? new Date(Math.min(time.getTime() + 40 * 60000, now.getTime())).toISOString() : undefined;
+    return { id: crypto.randomUUID(), note: "", ...entry, time: time.toISOString(), endTime };
+  });
+  activeSleep = null;
   selectedDay = localDay(now);
   filter = "all";
   render();
+}
+
+function mapFirestoreEvent(eventDoc) {
+  const data = eventDoc.data();
+  return {
+    id: eventDoc.id,
+    ...data,
+    time: data.time.toDate().toISOString(),
+    endTime: data.endTime?.toDate ? data.endTime.toDate().toISOString() : data.endTime || null,
+  };
 }
 
 function subscribeToDay() {
@@ -193,10 +484,7 @@ function subscribeToDay() {
   const events = collection(db, "households", "riley", "events");
   const eventQuery = query(events, where("time", ">=", Timestamp.fromDate(start)), where("time", "<", Timestamp.fromDate(end)), orderBy("time", "desc"));
   stopEntries = onSnapshot(eventQuery, (snapshot) => {
-    entries = snapshot.docs.map((eventDoc) => {
-      const data = eventDoc.data();
-      return { id: eventDoc.id, ...data, time: data.time.toDate().toISOString() };
-    });
+    entries = snapshot.docs.map(mapFirestoreEvent);
     render();
     setStatus("Shared Riley records", "live");
   }, (error) => {
@@ -206,7 +494,94 @@ function subscribeToDay() {
   });
 }
 
-async function initializeHousehold(user) {
+function subscribeToActiveSleep() {
+  stopSleep?.();
+  const sleepQuery = query(collection(db, "households", "riley", "events"), where("type", "==", "sleep"));
+  stopSleep = onSnapshot(sleepQuery, (snapshot) => {
+    sleepSessions = snapshot.docs.map(mapFirestoreEvent);
+    activeSleep = sleepSessions.find((session) => !session.endTime) || null;
+    render();
+  }, (error) => {
+    console.error("Riley's active sleep could not be loaded", error);
+    notify("Could not check sleep status. Try refreshing.");
+  });
+}
+
+async function startSleepNow() {
+  if (activeSleep) return notify("Riley is already marked as sleeping.");
+  const now = new Date();
+  selectedDay = localDay(now);
+  const person = currentMemberName();
+  const entry = { type: "sleep", time: now, endTime: null, person, note: "" };
+  try {
+    await saveEntry(entry);
+    if (demo) {
+      activeSleep = entries.find((item) => item.type === "sleep" && !item.endTime) || null;
+      render();
+    } else {
+      subscribeToDay();
+    }
+    notify("Sleep started.");
+  } catch (error) {
+    console.error("Sleep could not be started", error);
+    notify("Could not start sleep. Check your connection and try again.");
+  }
+}
+
+async function endSleepNow() {
+  if (!activeSleep) return;
+  const endTime = new Date();
+  try {
+    if (demo) {
+      entries = entries.map((entry) => entry.id === activeSleep.id ? { ...entry, endTime: endTime.toISOString() } : entry);
+      activeSleep = null;
+      render();
+    } else {
+      await updateDoc(doc(db, "households", "riley", "events", activeSleep.id), { endTime: Timestamp.fromDate(endTime), updatedAt: Timestamp.now() });
+      subscribeToDay();
+    }
+    notify("Sleep ended.");
+  } catch (error) {
+    console.error("Sleep could not be ended", error);
+    notify("Could not end sleep. Try again.");
+  }
+}
+
+function chooseSleepAction() {
+  if (activeSleep) return endSleepNow();
+  wizard = { category: "sleep-choice", step: 0, values: {} };
+  $("entry-form").hidden = true;
+  $("entry-wizard").hidden = false;
+  $("dialog-title").textContent = "Sleep";
+  $("wizard-progress").textContent = "QUICK ACTION";
+  const content = $("wizard-content");
+  content.replaceChildren(element("h3", "wizard-title", "How would you like to log sleep?"));
+  const choices = element("div", "wizard-choices");
+  [["start", "Start sleep now"], ["manual", "Log a past sleep"]].forEach(([value, label]) => {
+    const button = element("button", "choice-button", label);
+    button.type = "button";
+    button.addEventListener("click", () => {
+      $("entry-dialog").close();
+      if (value === "start") startSleepNow(); else openWizard("sleep");
+    });
+    choices.append(button);
+  });
+  content.append(choices);
+  $("wizard-back").hidden = true;
+  $("wizard-next").hidden = true;
+  $("entry-dialog").showModal();
+}
+
+function openSleepChoice() {
+  chooseSleepAction();
+}
+
+function onMembersLoaded(snapshot) {
+  members = snapshot.docs.map((memberDoc) => ({ id: memberDoc.id, ...memberDoc.data() }));
+  setCaregiverOptions(currentMemberName());
+}
+
+function initializeHousehold(user) {
   currentUser = user;
   stopMembership?.();
   stopMembers?.();
@@ -216,6 +591,7 @@ async function initializeHousehold(user) {
     if (!memberSnapshot.exists()) {
       stopEntries?.();
       stopMembers?.();
+      stopSleep?.();
       $("access-pending").hidden = false;
       $("auth-uid").textContent = user.uid;
       $("sign-in-panel").hidden = false;
@@ -226,7 +602,6 @@ async function initializeHousehold(user) {
       return;
     }
     const member = memberSnapshot.data();
-    $("access-pending").hidden = true;
     $("account-name").textContent = member.name || user.email;
     $("account-controls").hidden = false;
     $("tracker-app").hidden = false;
@@ -234,22 +609,12 @@ async function initializeHousehold(user) {
     $("entry-hint").textContent = "Shared with your household as soon as you save.";
     setStatus("Shared Riley records", "live");
     stopMembers?.();
-    stopMembers = onSnapshot(collection(db, "households", "riley", "members"), (snapshot) => {
-      members = snapshot.docs.map((memberDoc) => ({ id: memberDoc.id, ...memberDoc.data() }));
-      const select = $("entry-person");
-      const selected = select.value;
-      select.replaceChildren(...members.map((householdMember) => {
-        const option = document.createElement("option");
-        option.value = householdMember.name;
-        option.textContent = householdMember.name;
-        return option;
-      }));
-      if (members.some((householdMember) => householdMember.name === selected)) select.value = selected;
-    }, (error) => {
+    stopMembers = onSnapshot(collection(db, "households", "riley", "members"), onMembersLoaded, (error) => {
       console.error("Riley household members could not be loaded", error);
       setStatus("Could not load household members", "error");
     });
     subscribeToDay();
+    subscribeToActiveSleep();
   }, (error) => {
     console.error("Riley household access could not be checked", error);
     showSignIn("Could not check household access. Confirm Firestore rules are installed.");
@@ -268,6 +633,7 @@ const hasFirebaseConfig = configValues.every(Boolean);
 
 if (!configValues.some(Boolean)) {
   demo = true;
+  members = [{ id: "demo-aidan", name: "Aidan" }, { id: "demo-kane", name: "Kane" }];
   $("sign-in-panel").hidden = true;
   $("tracker-app").hidden = false;
   $("storage-note").textContent = "Design preview · no shared storage yet";
@@ -303,9 +669,13 @@ if (!configValues.some(Boolean)) {
     onAuthStateChanged(auth, (user) => {
       if (!user) {
         currentUser = undefined;
+        members = [];
+        sleepSessions = [];
+        activeSleep = null;
         stopEntries?.();
         stopMembership?.();
         stopMembers?.();
+        stopSleep?.();
         showSignIn();
         setStatus("Sign in to view Riley records");
       } else initializeHousehold(user);
@@ -345,63 +715,132 @@ $("copy-auth-uid").addEventListener("click", async () => {
 });
 
 $("sign-out").addEventListener("click", () => signOut(auth).catch((error) => console.error("Riley sign-out failed", error)));
-document.querySelectorAll("[data-add]").forEach((button) => button.addEventListener("click", () => openEntry(button.dataset.add)));
+document.querySelectorAll("[data-add]").forEach((button) => button.addEventListener("click", () => {
+  if (button.dataset.add === "feed") openWizard("feed");
+  else if (button.dataset.add === "diaper") openWizard("diaper");
+  else openSleepChoice();
+}));
 document.querySelectorAll("[data-filter]").forEach((button) => button.addEventListener("click", () => { filter = button.dataset.filter; render(); }));
 $("entry-type").addEventListener("change", syncFields);
 $("feed-method").addEventListener("change", syncFields);
-["close-dialog", "cancel-dialog"].forEach((id) => $(id).addEventListener("click", () => $("entry-dialog").close()));
-$("entry-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const timestamp = new Date($("entry-time").value);
-  if (!Number.isFinite(timestamp.getTime()) || timestamp > new Date()) {
-    $("entry-time").setCustomValidity("Choose a valid time that is not in the future.");
-    $("entry-time").reportValidity();
+["close-dialog", "cancel-dialog", "wizard-cancel"].forEach((id) => $(id).addEventListener("click", () => $("entry-dialog").close()));
+$("wizard-back").addEventListener("click", () => {
+  if (wizard?.category === "sleep-choice") return;
+  if (wizard && wizard.step > 0) {
+    collectWizardValue();
+    wizard.step -= 1;
+    renderWizard();
+  }
+});
+$("wizard-next").addEventListener("click", async () => {
+  if (!wizard || !collectWizardValue()) return;
+  const steps = stepsForWizard();
+  if (wizard.step < steps.length - 1) {
+    wizard.step += 1;
+    renderWizard();
     return;
   }
-  const id = $("entry-id").value;
-  const type = $("entry-type").value;
-  const entry = { type, time: timestamp, person: $("entry-person").value, note: $("entry-note").value.trim() };
-  if (type === "feed") {
-    entry.method = $("feed-method").value;
-    if (entry.method === "breast") { entry.side = $("feed-side").value; entry.duration = $("feed-duration").value; }
-    else entry.amount = $("feed-amount").value;
+  const entry = buildWizardEntry();
+  if (entry.type === "sleep" && (!entry.endTime || entry.endTime <= entry.time || entry.endTime > new Date())) {
+    notify("Choose a wake time after sleep began and not in the future.");
+    wizard.step = stepsForWizard().findIndex((step) => step.key === "endTime");
+    renderWizard();
+    return;
   }
   try {
+    await saveEntry(entry);
     if (demo) {
-      const localEntry = { ...entry, time: timestamp.toISOString(), id: id || crypto.randomUUID() };
-      entries = id ? entries.map((existing) => existing.id === id ? localEntry : existing) : [...entries, localEntry];
-    } else if (id) {
-      await updateDoc(doc(db, "households", "riley", "events", id), { ...entry, updatedAt: Timestamp.now() });
+      if (entry.type === "sleep" && !entry.endTime) activeSleep = entries[entries.length - 1];
+      selectedDay = localDay(entry.time);
+      render();
     } else {
-      await addDoc(collection(db, "households", "riley", "events"), { ...entry, createdBy: currentUser.uid, createdAt: Timestamp.now(), updatedAt: Timestamp.now() });
+      selectedDay = localDay(entry.time);
+      subscribeToDay();
     }
-    selectedDay = localDay(timestamp);
     filter = "all";
     $("entry-dialog").close();
-    if (demo) render(); else subscribeToDay();
-    notify(id ? "Moment updated." : demo ? "Moment added to the demo." : "Moment added.");
+    notify("Moment added.");
   } catch (error) {
     console.error("Riley moment could not be saved", error);
     notify("Could not save that moment. Check your connection and try again.");
   }
 });
+
+$("entry-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const timestamp = new Date($("entry-time").value);
+  const type = $("entry-type").value;
+  const endInput = $("sleep-end-time").value;
+  const endTime = endInput ? new Date(endInput) : null;
+  if (!Number.isFinite(timestamp.getTime()) || timestamp > new Date()) {
+    $("entry-time").setCustomValidity("Choose a valid time that is not in the future.");
+    $("entry-time").reportValidity();
+    return;
+  }
+  if (type === "sleep" && endTime && (endTime <= timestamp || endTime > new Date())) {
+    $("sleep-end-time").setCustomValidity("Choose a wake time after sleep began and not in the future.");
+    $("sleep-end-time").reportValidity();
+    return;
+  }
+  const id = $("entry-id").value;
+  const entry = { type, time: timestamp, person: $("entry-person").value, note: $("entry-note").value.trim() };
+  if (type === "feed") {
+    entry.method = $("feed-method").value;
+    if (entry.method === "breast") {
+      const left = $("feed-left-minutes").value;
+      const right = $("feed-right-minutes").value;
+      entry.startedSide = $("feed-started").value || "";
+      if (left) entry.leftMinutes = Number(left);
+      if (right) entry.rightMinutes = Number(right);
+      if (left && right) entry.side = "Both";
+      else if (left) entry.side = "Left";
+      else if (right) entry.side = "Right";
+      else entry.side = "";
+      if ($("feed-legacy-duration").value) entry.duration = Number($("feed-legacy-duration").value);
+    } else if ($("feed-amount").value) entry.amount = Number($("feed-amount").value);
+  } else if (["wee", "poo", "both"].includes(type)) {
+    if ($("wet-size").value) entry.wetSize = $("wet-size").value;
+    if ($("stool-size").value) entry.stoolSize = $("stool-size").value;
+  } else if (type === "sleep") entry.endTime = endTime;
+  try {
+    await saveEntry(entry, id);
+    selectedDay = localDay(timestamp);
+    filter = "all";
+    $("entry-dialog").close();
+    if (demo) {
+      if (activeSleep?.id === id) activeSleep = entry.endTime ? null : { ...activeSleep, ...entry, time: timestamp.toISOString(), endTime: endTime?.toISOString() || null };
+      render();
+    } else {
+      subscribeToDay();
+      if (type === "sleep") subscribeToActiveSleep();
+    }
+    notify("Moment updated.");
+  } catch (error) {
+    console.error("Riley moment could not be saved", error);
+    notify("Could not save that moment. Check your connection and try again.");
+  }
+});
+
 $("entry-time").addEventListener("input", () => $("entry-time").setCustomValidity(""));
+$("sleep-end-time").addEventListener("input", () => $("sleep-end-time").setCustomValidity(""));
 $("delete-entry").addEventListener("click", async () => {
-  const deleted = entries.find((entry) => entry.id === $("entry-id").value);
+  const deleted = [...entries, ...sleepSessions].find((entry) => entry.id === $("entry-id").value);
   if (!deleted) return;
   try {
     if (demo) entries = entries.filter((entry) => entry.id !== deleted.id);
     else await deleteDoc(doc(db, "households", "riley", "events", deleted.id));
+    if (activeSleep?.id === deleted.id) activeSleep = null;
     $("entry-dialog").close();
-    if (demo) render(); else subscribeToDay();
+    if (demo) render(); else { subscribeToDay(); subscribeToActiveSleep(); }
     notify("Moment deleted.", async () => {
       if (demo) entries.push(deleted);
       else {
         const restored = { ...deleted, time: Timestamp.fromDate(new Date(deleted.time)), createdBy: currentUser.uid, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
+        if (deleted.endTime) restored.endTime = Timestamp.fromDate(new Date(deleted.endTime));
         delete restored.id;
         await addDoc(collection(db, "households", "riley", "events"), restored);
       }
-      if (demo) render(); else subscribeToDay();
+      if (demo) render(); else { subscribeToDay(); subscribeToActiveSleep(); }
       notify("Moment restored.");
     });
   } catch (error) {

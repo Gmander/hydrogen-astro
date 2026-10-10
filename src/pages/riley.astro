@@ -44,14 +44,14 @@
         <div class="section-caption"><h2 id="quick-title">Record a moment</h2><span>Pick an event. Add the details.</span></div>
         <div class="quick-grid">
           <button class="quick-card feed" data-add="feed"><span class="event-icon" aria-hidden="true">♡</span><span><strong>Feed</strong><small>Breast or bottle</small></span><span class="plus" aria-hidden="true">+</span></button>
-          <button class="quick-card wee" data-add="wee"><span class="event-icon droplet" aria-hidden="true"></span><span><strong>Wee</strong><small>A wet nappy</small></span><span class="plus" aria-hidden="true">+</span></button>
-          <button class="quick-card poo" data-add="poo"><span class="event-icon" aria-hidden="true">≋</span><span><strong>Poo</strong><small>Dirty, or both</small></span><span class="plus" aria-hidden="true">+</span></button>
+          <button class="quick-card wee" data-add="diaper"><span class="event-icon droplet" aria-hidden="true"></span><span><strong>Diaper</strong><small>Wee, poo, or both</small></span><span class="plus" aria-hidden="true">+</span></button>
+          <button class="quick-card sleep" id="sleep-action-card" data-add="sleep"><span class="event-icon" aria-hidden="true">☾</span><span><strong id="sleep-action-title">Sleep</strong><small id="sleep-action-hint">Start or log sleep</small></span><span class="plus" aria-hidden="true">+</span></button>
         </div>
       </section>
       <div class="main-grid">
         <section class="journal" aria-labelledby="timeline-title">
           <div class="journal-heading"><div><p class="eyebrow">THE LITTLE DETAILS</p><h2 id="timeline-title">Today’s timeline</h2></div><span class="count-pill" id="event-count"></span></div>
-          <div class="filters" role="group" aria-label="Filter timeline"><button class="active" data-filter="all" aria-pressed="true">Everything</button><button data-filter="feed" aria-pressed="false">Feeds</button><button data-filter="wee" aria-pressed="false">Wees</button><button data-filter="poo" aria-pressed="false">Poos</button></div>
+          <div class="filters" role="group" aria-label="Filter timeline"><button class="active" data-filter="all" aria-pressed="true">Everything</button><button data-filter="feed" aria-pressed="false">Feeds</button><button data-filter="wee" aria-pressed="false">Wees</button><button data-filter="poo" aria-pressed="false">Poos</button><button data-filter="sleep" aria-pressed="false">Sleep</button></div>
           <ol id="timeline" class="timeline"></ol>
           <div id="empty" class="empty" hidden><span aria-hidden="true">✳</span><h3>A little space for the day.</h3><p>No matching moments yet. Add one above.</p></div>
           <p class="timeline-foot">Tap any moment to edit its details.</p>
@@ -65,17 +65,23 @@
     </main>
   </div>
   <dialog id="entry-dialog" aria-labelledby="dialog-title">
-    <form id="entry-form">
       <div class="dialog-heading"><div><p class="eyebrow">A LITTLE MOMENT</p><h2 id="dialog-title">Record a feed</h2></div><button type="button" class="icon-button" id="close-dialog" aria-label="Close">×</button></div>
-      <input type="hidden" id="entry-id" />
-      <label>What happened?<select id="entry-type"><option value="feed">Feed</option><option value="wee">Wee</option><option value="poo">Poo</option><option value="both">Wee + poo</option></select></label>
-      <div id="feed-fields"><label>Feed type<select id="feed-method"><option value="breast">Breast</option><option value="bottle">Bottle</option></select></label><div class="field-pair" id="breast-fields"><label>Side<select id="feed-side"><option>Left</option><option>Right</option><option>Both</option><option value="">Not recorded</option></select></label><label>Minutes (optional)<input id="feed-duration" type="number" min="1" max="300" step="1" inputmode="numeric" /></label></div><label id="bottle-fields" hidden>Amount in ml (optional)<input id="feed-amount" type="number" min="1" max="2000" step="1" inputmode="numeric" /></label></div>
-      <label>When?<input id="entry-time" type="datetime-local" required /></label>
-      <label>Caregiver<select id="entry-person"><option>Aidan</option><option>Kane</option></select></label>
-      <label>A note (optional)<textarea id="entry-note" rows="2" maxlength="300" placeholder="Anything you’d like to remember"></textarea></label>
-      <p class="form-hint" id="entry-hint">Demo only. Entries disappear when you refresh.</p>
-      <div class="dialog-actions"><button type="button" id="delete-entry" class="delete-button" hidden>Delete</button><button type="button" id="cancel-dialog" class="secondary-button">Cancel</button><button type="submit" class="primary-button">Save moment <span aria-hidden="true">↗</span></button></div>
-    </form>
+      <div id="entry-wizard" hidden>
+        <p class="wizard-progress" id="wizard-progress"></p><div id="wizard-content"></div>
+        <div class="dialog-actions"><button type="button" id="wizard-cancel" class="secondary-button">Cancel</button><button type="button" id="wizard-back" class="secondary-button">Back</button><button type="button" id="wizard-next" class="primary-button">Next <span aria-hidden="true">↗</span></button></div>
+      </div>
+      <form id="entry-form" hidden>
+        <input type="hidden" id="entry-id" />
+        <label>What happened?<select id="entry-type"><option value="feed">Feed</option><option value="wee">Wee</option><option value="poo">Poo</option><option value="both">Wee + poo</option><option value="sleep">Sleep</option></select></label>
+        <div id="feed-fields"><label>Feed type<select id="feed-method"><option value="breast">Breast</option><option value="bottle">Bottle</option></select></label><div class="field-pair" id="breast-fields"><label>Started on<select id="feed-started"><option value="">Not recorded</option><option>Left</option><option>Right</option></select></label><label id="feed-legacy-label" hidden>Previous total minutes<input id="feed-legacy-duration" type="number" min="1" max="300" step="1" inputmode="numeric" /></label></div><div class="field-pair"><label>Left minutes (optional)<input id="feed-left-minutes" type="number" min="1" max="300" step="1" inputmode="numeric" /></label><label>Right minutes (optional)<input id="feed-right-minutes" type="number" min="1" max="300" step="1" inputmode="numeric" /></label></div><label id="bottle-fields" hidden>Amount in ml (optional)<input id="feed-amount" type="number" min="1" max="2000" step="1" inputmode="numeric" /></label></div>
+        <div id="diaper-fields"><label id="wet-size-label">Wee amount<select id="wet-size"><option value="">Not recorded</option><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select></label><label id="stool-size-label">Poo amount<select id="stool-size"><option value="">Not recorded</option><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select></label></div>
+        <label>When?<input id="entry-time" type="datetime-local" required /></label>
+        <label id="sleep-end-label" hidden>Woke up at (leave blank if still asleep)<input id="sleep-end-time" type="datetime-local" /></label>
+        <label>Caregiver<select id="entry-person"></select></label>
+        <label>A note (optional)<textarea id="entry-note" rows="2" maxlength="300" placeholder="Anything you’d like to remember"></textarea></label>
+        <p class="form-hint" id="entry-hint">Shared with your household as soon as you save.</p>
+        <div class="dialog-actions"><button type="button" id="delete-entry" class="delete-button" hidden>Delete</button><button type="button" id="cancel-dialog" class="secondary-button">Cancel</button><button type="submit" class="primary-button">Save moment <span aria-hidden="true">↗</span></button></div>
+      </form>
   </dialog>
   <div class="toast" id="toast" role="status" hidden><span id="toast-text"></span><button id="undo" hidden>Undo</button></div>
   <noscript>This interactive proposal needs JavaScript enabled. No real records are stored.</noscript>

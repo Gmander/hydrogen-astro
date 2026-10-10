@@ -33,7 +33,7 @@ With all four values absent, `/riley` stays in the sample-data demo mode. If onl
    Repeat for the other parent. The app never lets a browser add or change membership. Only someone with Firebase Console access can authorize another account in this first version.
 3. The access screen listens for that membership document. Once it appears, the tracker opens and the caregiver selector uses the names from the household member documents.
 
-The app stores events under `households/riley/events/{eventId}`. Each event has a type, Firestore timestamp, caregiver name, note, and creator UID; feed-specific details are optional. Any household member can read, add, edit, or delete the household's events. The account that entered a record is kept separately from the caregiver selected for that event.
+The app stores events under `households/riley/events/{eventId}`. Each event has a type, start/time timestamp, caregiver name, note, and creator UID. Breast feeds can store left/right minutes and the starting side; diaper events can store separate wee and poo sizes; sleep sessions store a start time and an optional wake time (null while ongoing). Sleep sessions appear on each calendar day they overlap, including across midnight. Older breast-feed records using `side` and `duration` remain readable. Any household member can read, add, edit, or delete the household's events. The account that entered a record is kept separately from the caregiver selected for that event.
 
 ## Scope and limits
 
