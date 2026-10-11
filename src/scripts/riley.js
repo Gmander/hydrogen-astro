@@ -5,8 +5,10 @@ import {
   isSignInWithEmailLink,
   onAuthStateChanged,
   sendSignInLinkToEmail,
+  sendPasswordResetEmail,
   setPersistence,
   signInWithEmailLink,
+  signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
 import {
@@ -690,8 +692,48 @@ if (!configValues.some(Boolean)) {
 $("sign-in-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!auth) return;
-  const email = $("auth-email").value.trim();
   const submit = $("sign-in-submit");
+  submit.disabled = true;
+  try {
+    await signInWithEmailAndPassword(auth, $("auth-email").value.trim(), $("auth-password").value);
+    $("auth-password").value = "";
+  } catch (error) {
+    console.error("Riley password sign-in failed", error);
+    const messages = {
+      "auth/invalid-credential": "The email or password wasn't recognized. Try again, or set/reset your password.",
+      "auth/wrong-password": "The email or password wasn't recognized. Try again, or set/reset your password.",
+      "auth/user-not-found": "The email or password wasn't recognized. Try again, or set/reset your password.",
+      "auth/too-many-requests": "Too many sign-in attempts. Please wait before trying again.",
+      "auth/network-request-failed": "Could not connect. Check your internet connection and try again.",
+    };
+    $("auth-message").textContent = messages[error.code] || "Could not sign in. Please try again later.";
+  } finally {
+    submit.disabled = false;
+  }
+});
+
+$("reset-password").addEventListener("click", async () => {
+  if (!auth || !$("auth-email").reportValidity()) return;
+  const button = $("reset-password");
+  button.disabled = true;
+  try {
+    await sendPasswordResetEmail(auth, $("auth-email").value.trim(), { url: `${window.location.origin}/riley/` });
+    $("auth-message").textContent = "If this email has a Riley account, you'll receive a link to set or reset your password. Then return here to sign in.";
+  } catch (error) {
+    console.error("Riley password reset could not be sent", error);
+    $("auth-message").textContent = error.code === "auth/too-many-requests" || error.code === "auth/quota-exceeded"
+      ? "The password reset limit has been reached. Please try again later."
+      : "Could not send the password reset email. Please try again later.";
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("email-link-sign-in").addEventListener("click", async (event) => {
+  event.preventDefault();
+  if (!auth || !$("auth-email").reportValidity()) return;
+  const email = $("auth-email").value.trim();
+  const submit = $("email-link-sign-in");
   submit.disabled = true;
   try {
     await sendSignInLinkToEmail(auth, email, { url: `${window.location.origin}/riley/`, handleCodeInApp: true });
@@ -699,7 +741,13 @@ $("sign-in-form").addEventListener("submit", async (event) => {
     $("auth-message").textContent = "Check your email for the sign-in link. It will return you to Riley.";
   } catch (error) {
     console.error("Riley sign-in link could not be sent", error);
-    $("auth-message").textContent = "Could not send the sign-in link. Check the email and Firebase authorized domains.";
+    const messages = {
+      "auth/quota-exceeded": "Today's sign-in email limit has been reached. Try again later, or use a browser where you're already signed in.",
+      "auth/too-many-requests": "Too many sign-in attempts. Please wait before trying again.",
+      "auth/invalid-email": "Enter a valid email address.",
+      "auth/network-request-failed": "Could not connect. Check your internet connection and try again.",
+    };
+    $("auth-message").textContent = messages[error.code] || "Could not send the sign-in link. Please try again later.";
   } finally {
     submit.disabled = false;
   }

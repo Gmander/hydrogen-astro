@@ -14,11 +14,15 @@
   <section class="auth-panel" id="sign-in-panel" aria-labelledby="sign-in-title" hidden>
     <p class="eyebrow">A LITTLE MOMENT</p>
     <h1 id="sign-in-title">Welcome back<span class="brand-dot">.</span></h1>
-    <p class="subtitle">Sign in with a link sent to your email. This browser will stay signed in.</p>
+    <p class="subtitle">Sign in with your email and password. This browser will stay signed in.</p>
     <form id="sign-in-form">
       <label for="auth-email">Email address</label>
       <input id="auth-email" name="email" type="email" autocomplete="email" required placeholder="you@example.com" />
-      <button class="primary-button" id="sign-in-submit" type="submit">Send sign-in link <span aria-hidden="true">↗</span></button>
+      <label for="auth-password">Password</label>
+      <input id="auth-password" name="password" type="password" autocomplete="current-password" required />
+      <button class="primary-button" id="sign-in-submit" type="submit">Sign in <span aria-hidden="true">↗</span></button>
+      <button class="text-button" id="reset-password" type="button">Set or reset password</button>
+      <button class="text-button" id="email-link-sign-in" type="button">Email me a sign-in link</button>
     </form>
     <p class="form-hint" id="auth-message" role="status" aria-live="polite">Use the email address assigned to your Riley account.</p>
     <div class="access-pending" id="access-pending" hidden>

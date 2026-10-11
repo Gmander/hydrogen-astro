@@ -1,6 +1,10 @@
 # Riley Firebase setup
 
-Riley uses Firebase email-link authentication and Cloud Firestore for shared household records. The app uses Firebase's browser-local auth persistence, so a parent normally stays signed in on that browser. They sign in again on a new device or after signing out or clearing browser data. This is a small household tool, not production-grade customer authentication.
+Riley uses Firebase email/password authentication and Cloud Firestore for shared household records, with email-link sign-in also available. The app uses Firebase's browser-local auth persistence, so a parent normally stays signed in on that browser. They sign in again on a new device or after signing out or clearing browser data. This is a small household tool, not production-grade customer authentication.
+
+Existing email-link users can enter their email and choose **Set or reset password**, then personally complete Firebase's emailed password reset flow and return to sign in. This updates the existing account; do not create a replacement account or change its household member UID. The app does not provide public account registration. New parents still need an Auth account provisioned and their UID added to the household.
+
+On 2026-10-10, production email-link requests failed with `auth/quota-exceeded` (daily email sign-in quota exceeded). Firebase's [current limits](https://firebase.google.com/docs/auth/limits) list only five email-link emails/day on Spark; password reset emails have a separate quota. Normal password sign-in does not send an email.
 
 ## Firebase project
 
