@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#101b39" />
+  <title>Jeopardy Night · Runtime Ready</title>
+  <link rel="stylesheet" href="/jeopardy/style.css" />
+  <script src="../scripts/jeopardy.js"></script>
+</head>
+<body>
+  <header class="top"><a href="/" class="brand">RR <span>GAME NIGHT</span></a><span id="connection">Connecting…</span></header>
+  <main id="app">
+    <section id="home" class="panel hero">
+      <p class="kicker">YOUR LIVING ROOM. YOUR QUESTIONS.</p><h1>Jeopardy!<br><em>Game night starts here.</em></h1>
+      <p>Build and save your own boards, invite players on their phones, and let the room decide who buzzed first.</p>
+      <div class="actions"><button class="primary" id="new-game">Build a game</button><form id="join-form"><input id="room-code" placeholder="ROOM CODE" maxlength="8" aria-label="Room code" required><button class="secondary">Join a game</button></form></div>
+      <div id="saved-decks"></div>
+    </section>
+    <section id="editor" class="panel" hidden>
+      <div class="section-head"><div><p class="kicker">HOST SETUP</p><h1>Your game board</h1></div><button id="cancel-editor" class="quiet">Cancel</button></div>
+      <label class="field">Board name<input id="deck-name" maxlength="60" value="Friends Game Night"></label>
+      <div id="categories"></div>
+      <section class="category-editor final-editor"><p class="kicker">FINAL JEOPARDY</p><label class="field">Category<input id="final-category" maxlength="40" placeholder="Final category"></label><label class="field">Clue / question<textarea id="final-question" maxlength="500" placeholder="Final clue"></textarea></label><label class="field">Correct response<textarea id="final-answer" maxlength="300" placeholder="Answer stays private to the host"></textarea></label></section>
+      <div class="actions"><button id="add-category" class="secondary">＋ Add category</button><button id="save-deck" class="primary">Save board</button></div>
+      <p class="hint">Answers are private to the host. Daily Double is optional on each clue; Final Jeopardy uses the final category you choose.</p>
+    </section>
+    <section id="room" class="panel" hidden>
+      <div class="section-head"><div><p class="kicker" id="room-kicker">ROOM</p><h1 id="room-title">Game night</h1></div><button id="leave-room" class="quiet">Leave</button></div>
+      <div id="join-panel" hidden><p>Enter your name, then keep this page open to buzz in.</p><form id="player-form" class="actions"><input id="player-name" maxlength="24" placeholder="Your name" required><button class="primary">Join the room</button></form></div>
+      <div id="lobby" hidden><div class="room-code">ROOM CODE <strong id="code-display"></strong><button id="copy-link" class="quiet">Copy invite link</button></div><p id="lobby-instructions">Players can join on their phones using this code.</p><div id="lobby-players" class="players"></div><p id="waiting-host" hidden>Waiting for the host to start the game.</p><button id="start-board" class="primary">Start game</button></div>
+      <div id="play" hidden>
+        <div class="score-strip" id="scores"></div>
+        <div id="host-controls" hidden></div>
+        <div id="player-controls" hidden></div>
+        <div id="board" class="board"></div>
+        <div id="clue" class="clue" hidden></div>
+      </div>
+    </section>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </main>
+</body>
+</html>

@@ -59,6 +59,88 @@ service cloud.firestore {
       allow delete: if isRileyMember();
     }
 
+    function gamePath(gameId) {
+      return /databases/$(database)/documents/jeopardyGames/$(gameId);
+    }
+
+    function gameExists(gameId) {
+      return exists(gamePath(gameId));
+    }
+
+    function gameHost(gameId) {
+      return signedIn() && gameExists(gameId)
+        && get(gamePath(gameId)).data.hostUid == request.auth.uid;
+    }
+
+    function gamePlayer(gameId) {
+      return signedIn() && gameExists(gameId)
+        && exists(/databases/$(database)/documents/jeopardyGames/$(gameId)/players/$(request.auth.uid));
+    }
+
+    match /jeopardyDecks/{deckId} {
+      allow create: if signedIn()
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.keys().hasOnly(['owner', 'name', 'categories', 'createdAt', 'updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 60;
+      allow get, list: if signedIn() && resource.data.owner == request.auth.uid;
+      allow update: if signedIn() && resource.data.owner == request.auth.uid
+        && request.resource.data.owner == request.auth.uid;
+      allow delete: if signedIn() && resource.data.owner == request.auth.uid;
+    }
+
+    match /jeopardyGames/{gameId} {
+      allow create: if signedIn()
+        && request.resource.data.hostUid == request.auth.uid
+        && request.resource.data.phase == 'lobby'
+        && request.resource.data.keys().hasOnly([
+          'hostUid', 'deckId', 'name', 'phase', 'categories', 'completed', 'current',
+          'buzzedBy', 'buzzAt', 'activePlayer', 'finalCategory', 'createdAt', 'updatedAt'
+        ]);
+      allow get: if signedIn() && (resource.data.hostUid == request.auth.uid
+        || resource.data.phase == 'lobby' || gamePlayer(gameId));
+      allow list: if false;
+      allow update: if gameHost(gameId)
+        || (gamePlayer(gameId)
+          && resource.data.phase == 'clue'
+          && resource.data.buzzedBy == null
+          && (resource.data.current.dailyDouble != true || resource.data.activePlayer == request.auth.uid)
+          && request.resource.data.buzzedBy == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['buzzedBy', 'buzzAt', 'updatedAt']));
+      allow delete: if gameHost(gameId);
+
+      match /players/{playerId} {
+        allow get, list: if gameHost(gameId) || gamePlayer(gameId);
+        allow create: if signedIn() && playerId == request.auth.uid
+          && gameExists(gameId) && get(gamePath(gameId)).data.phase == 'lobby'
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 24
+          && request.resource.data.score == 0
+          && request.resource.data.keys().hasOnly(['name', 'score', 'joinedAt', 'isHost']);
+        allow update: if gameHost(gameId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['score']);
+        allow delete: if gameHost(gameId);
+      }
+
+      match /private/{answerDoc} {
+        allow read, write: if gameHost(gameId);
+      }
+
+      match /responses/{playerId} {
+        allow get: if gameHost(gameId) || (gamePlayer(gameId) && playerId == request.auth.uid);
+        allow list: if gameHost(gameId);
+        allow create: if gamePlayer(gameId) && playerId == request.auth.uid
+          && get(gamePath(gameId)).data.phase == 'final'
+          && request.resource.data.wager is number
+          && request.resource.data.wager >= 0
+          && request.resource.data.answer is string
+          && request.resource.data.answer.size() <= 300
+          && request.resource.data.keys().hasOnly(['wager', 'answer', 'submittedAt']);
+        allow update, delete: if gameHost(gameId);
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
