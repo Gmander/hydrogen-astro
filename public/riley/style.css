@@ -8,3 +8,18 @@
 .entry-symbol.wee{font-size:0}.entry-symbol.wee::before{content:'';width:11px;height:15px;border:1.3px solid currentColor;transform:rotate(45deg);border-radius:2px 65% 65%}
 .auth-panel{max-width:440px;margin:10vh auto;padding:36px 32px;background:#fffefa;border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 45px #203c3510}.auth-panel h1{font:normal 38px/1.1 var(--serif);letter-spacing:-1px;margin:0}.auth-panel .subtitle{line-height:1.6}.auth-panel form{margin-top:28px}.auth-panel .primary-button{width:100%;margin-top:5px}.auth-panel .form-hint{margin-top:17px}.access-pending{display:grid;gap:12px;margin-top:24px;padding:16px;background:#f1e5dc;border-radius:9px;font-size:12px;line-height:1.5}.access-pending code{overflow-wrap:anywhere;font-size:10px}.access-pending .secondary-button{width:max-content}.account-controls{display:flex;align-items:center;gap:14px;font-size:11px;color:var(--muted)}.account-controls .text-button{color:var(--ink)}.demo-bar[data-mode="error"]{background:#f1e5dc;color:#7f4938}.demo-bar[data-mode="live"]{background:#e3ecea}
 @media(max-width:520px){.auth-panel{margin:8vh 16px;padding:28px 22px}.masthead{gap:10px}.account-controls{gap:8px}.account-controls>span{max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+
+/* Keep the tracker dialogs comfortable at desktop zoom and on small screens. */
+dialog#entry-dialog{width:min(480px,calc(100vw - 32px));padding:28px;max-height:calc(100dvh - 32px);overflow-y:auto}
+#entry-dialog .dialog-heading{gap:16px;margin-bottom:20px}
+#entry-dialog .dialog-heading>div{min-width:0}
+#entry-dialog .dialog-heading h2{font-size:clamp(25px,5vw,29px);line-height:1.12}
+#entry-dialog .wizard-progress{margin-bottom:8px}
+#entry-dialog .wizard-progress+#wizard-content{min-height:0}
+#entry-dialog .wizard-title{margin-bottom:14px}
+#entry-dialog .wizard-choices{grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+#entry-dialog .choice-button{min-height:58px;padding:12px 10px}
+#entry-dialog .dialog-actions{margin-top:18px}
+#entry-dialog .wizard-time-hint{display:block;margin-top:7px;color:var(--muted);font-size:10px;font-weight:400;line-height:1.4}
+#entry-dialog input[type=time],#entry-dialog input[type=datetime-local]{min-height:48px;font-variant-numeric:tabular-nums}
+@media(max-width:520px){dialog#entry-dialog{width:calc(100vw - 28px);padding:24px 20px 20px;max-height:calc(100dvh - 28px)}#entry-dialog .dialog-heading{margin-bottom:18px}#entry-dialog .wizard-choices{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}#entry-dialog .choice-button{min-height:60px}#entry-dialog .dialog-actions{gap:7px}#entry-dialog .dialog-actions button{padding-inline:12px}}

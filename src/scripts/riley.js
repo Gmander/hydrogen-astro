@@ -285,6 +285,16 @@ function wizardTimeDefault(key) {
   return defaultTime();
 }
 
+function localClockTime(date) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function wizardClockDefault(key) {
+  const date = wizardTimeDefault(key);
+  date.setMinutes(Math.floor(date.getMinutes() / 5) * 5, 0, 0);
+  return date;
+}
+
 function renderWizard() {
   const steps = stepsForWizard();
   const step = steps[wizard.step];
@@ -311,14 +321,27 @@ function renderWizard() {
   } else if (step.kind === "time") {
     const label = document.createElement("label");
     label.className = "wizard-label";
-    label.textContent = step.label;
+    const clockOnly = step.key === "time";
+    label.textContent = clockOnly
+      ? `Time on ${new Date(`${selectedDay}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric" })}`
+      : step.label;
     const input = document.createElement("input");
-    input.type = "datetime-local";
+    input.type = clockOnly ? "time" : "datetime-local";
     input.id = "wizard-input";
     input.required = true;
-    input.max = localInput(new Date());
-    input.value = wizard.values[step.key] || localInput(wizardTimeDefault(step.key));
-    label.append(input);
+    if (clockOnly) {
+      input.step = "300";
+      input.value = wizard.values[step.key]
+        ? localClockTime(new Date(wizard.values[step.key]))
+        : localClockTime(wizardClockDefault(step.key));
+      if (selectedDay === localDay(new Date())) input.max = localClockTime(new Date());
+      const hint = element("span", "wizard-time-hint", "Scroll or tap to change by 5 minutes");
+      label.append(input, hint);
+    } else {
+      input.max = localInput(new Date());
+      input.value = wizard.values[step.key] || localInput(wizardTimeDefault(step.key));
+      label.append(input);
+    }
     content.append(label);
   } else if (step.kind === "number") {
     const label = document.createElement("label");
@@ -373,7 +396,10 @@ function collectWizardValue() {
   const step = steps[wizard.step];
   if (step.kind === "time" || step.kind === "number") {
     const input = $("wizard-input");
-    if (step.kind === "time" && (!input.value || !Number.isFinite(new Date(input.value).getTime()) || new Date(input.value) > new Date())) {
+    const clockOnly = step.kind === "time" && step.key === "time";
+    const selectedTime = clockOnly ? new Date(`${selectedDay}T${input.value || ""}`) : new Date(input.value);
+    if (step.kind === "time") input.setCustomValidity("");
+    if (step.kind === "time" && (!input.value || !Number.isFinite(selectedTime.getTime()) || selectedTime > new Date())) {
       input.setCustomValidity("Choose a valid time that is not in the future.");
       input.reportValidity();
       return false;
@@ -382,7 +408,7 @@ function collectWizardValue() {
       input.reportValidity();
       return false;
     }
-    wizard.values[step.key] = input.value;
+    wizard.values[step.key] = clockOnly ? localInput(selectedTime) : input.value;
   } else if (step.kind === "details") {
     wizard.values.person = $("wizard-caregiver").value;
     wizard.values.note = $("wizard-note").value.trim();
