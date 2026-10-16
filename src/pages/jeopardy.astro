@@ -21,10 +21,12 @@
     <section id="editor" class="panel" hidden>
       <div class="section-head"><div><p class="kicker">HOST SETUP</p><h1>Your game board</h1></div><button id="cancel-editor" class="quiet">Cancel</button></div>
       <label class="field">Board name<input id="deck-name" maxlength="60" value="Friends Game Night"></label>
-      <div id="categories"></div>
+      <section class="import-box"><p class="kicker">QUICK IMPORT</p><label class="field">Paste a two-round Markdown board<textarea id="import-text" placeholder="Paste headings, clue values, and responses here" maxlength="30000"></textarea></label><button id="import-board" type="button" class="secondary">Import pasted board</button><p class="hint">Import fills the editor; nothing is saved until you press Save board.</p></section>
+      <section class="round-section"><div class="section-head"><div><p class="kicker">ROUND ONE · $100–$500</p><h2>Jeopardy!</h2></div><button id="add-category-0" class="secondary add-category" type="button">＋ Add category</button></div><div id="categories-0"></div></section>
+      <section class="round-section"><div class="section-head"><div><p class="kicker">ROUND TWO · $200–$1,000</p><h2>Double Jeopardy!</h2></div><button id="add-category-1" class="secondary add-category" type="button">＋ Add category</button></div><div id="categories-1"></div></section>
       <section class="category-editor final-editor"><p class="kicker">FINAL JEOPARDY</p><label class="field">Category<input id="final-category" maxlength="40" placeholder="Final category"></label><label class="field">Clue / question<textarea id="final-question" maxlength="500" placeholder="Final clue"></textarea></label><label class="field">Correct response<textarea id="final-answer" maxlength="300" placeholder="Answer stays private to the host"></textarea></label></section>
-      <div class="actions"><button id="add-category" class="secondary">＋ Add category</button><button id="save-deck" class="primary">Save board</button></div>
-      <p class="hint">Answers are private to the host. Daily Double is optional on each clue; Final Jeopardy uses the final category you choose.</p>
+      <div class="actions"><button id="save-deck" class="primary">Save board</button></div>
+      <p class="hint">Answers are private to the host. Mark Daily Doubles on the clues you choose; Final Jeopardy becomes available after both rounds.</p>
     </section>
     <section id="room" class="panel" hidden>
       <div class="section-head"><div><p class="kicker" id="room-kicker">ROOM</p><h1 id="room-title">Game night</h1></div><button id="leave-room" class="quiet">Leave</button></div>
@@ -32,6 +34,7 @@
       <div id="lobby" hidden><div class="room-code">ROOM CODE <strong id="code-display"></strong><button id="copy-link" class="quiet">Copy invite link</button></div><p id="lobby-instructions">Players can join on their phones using this code.</p><div id="lobby-players" class="players"></div><p id="waiting-host" hidden>Waiting for the host to start the game.</p><button id="start-board" class="primary">Start game</button></div>
       <div id="play" hidden>
         <div class="score-strip" id="scores"></div>
+        <p class="kicker" id="round-label"></p>
         <div id="host-controls" hidden></div>
         <div id="player-controls" hidden></div>
         <div id="board" class="board"></div>

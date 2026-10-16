@@ -80,7 +80,8 @@ service cloud.firestore {
     match /jeopardyDecks/{deckId} {
       allow create: if signedIn()
         && request.resource.data.owner == request.auth.uid
-        && request.resource.data.keys().hasOnly(['owner', 'name', 'categories', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['owner', 'name', 'rounds', 'final', 'categories', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['owner', 'name', 'rounds', 'final', 'createdAt', 'updatedAt'])
         && request.resource.data.name is string
         && request.resource.data.name.size() <= 60;
       allow get, list: if signedIn() && resource.data.owner == request.auth.uid;
@@ -94,7 +95,7 @@ service cloud.firestore {
         && request.resource.data.hostUid == request.auth.uid
         && request.resource.data.phase == 'lobby'
         && request.resource.data.keys().hasOnly([
-          'hostUid', 'deckId', 'name', 'phase', 'categories', 'completed', 'current',
+          'hostUid', 'deckId', 'name', 'phase', 'roundIndex', 'categories', 'values', 'completed', 'current',
           'buzzedBy', 'buzzAt', 'activePlayer', 'finalCategory', 'createdAt', 'updatedAt'
         ]);
       allow get: if signedIn() && (resource.data.hostUid == request.auth.uid
