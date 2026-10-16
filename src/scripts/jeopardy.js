@@ -185,7 +185,7 @@ async function scoreFinal(reply, correct) {
 
 function importMarkdown() {
   const lines = $("import-text").value.split(/\r?\n/), rounds = [[], []]; let roundIndex = 0, category = null, clue = null;
-  const finishClue = () => { if (!clue || !category) return; const entries = clue.entries, answerItems = entries.filter((x) => !/^additional points/i.test(x)); const answer = answerItems.pop() || ""; const hint = answerItems.filter((x) => !/^say what again|^royale with cheese/i.test(x)); const alternatives = answerItems.filter((x) => /^say what again|^royale with cheese/i.test(x));
+  const finishClue = () => { if (!clue || !category) return; const entries = clue.entries, answerItems = entries.filter((x) => !/^additional points/i.test(x)); const answer = answerItems.pop() || ""; const hint = answerItems.filter((x) => !/^say what again|^royale with cheese/i.test(x)).map((x) => x.replace(/^hint:\s*/i, "")); const alternatives = answerItems.filter((x) => /^say what again|^royale with cheese/i.test(x));
     const row = roundValues[roundIndex].indexOf(clue.value), bonusText = entries.find((x) => /^additional points/i.test(x)); if (row >= 0) category.clues[row] = { value: clue.value, question: clue.question + (hint.length ? `\n\nHint: ${hint.join("; ")}` : "") + (bonusText ? `\n\nBonus: ${bonusText}` : ""), answer, acceptedAnswers: alternatives, bonusPoints: bonusText ? 200 : 0, dailyDouble: false };
     clue = null;
   };
