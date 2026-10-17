@@ -13,7 +13,22 @@ function show(view) { for (const id of ["home", "editor", "room"]) $(id).hidden 
 function gameRef(id = roomId) { return doc(db, "jeopardyGames", id); }
 function playerRef(uid, id = roomId) { return doc(db, "jeopardyGames", id, "players", uid); }
 function deckRef(id) { return doc(db, "jeopardyDecks", id); }
-function newCode() { const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; const bytes = crypto.getRandomValues(new Uint8Array(8)); return [...bytes].map((n) => alphabet[n % alphabet.length]).join(""); }
+function newCode() { const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; const bytes = crypto.getRandomValues(new Uint8Array(4)); return [...bytes].map((n) => alphabet[n % alphabet.length]).join(""); }
+async function loadResumeButton() {
+  const button = $("resume-room"), savedRoom = localStorage.getItem("jeopardy:lastRoom");
+  button.hidden = true;
+  if (!savedRoom || !user) return;
+  try {
+    const snap = await getDoc(gameRef(savedRoom));
+    if (!snap.exists()) return;
+    const record = snap.data(), isSavedHost = record.hostUid === user.uid && localStorage.getItem("jeopardy:lastHost") === "1";
+    const player = isSavedHost ? null : await getDoc(playerRef(user.uid, savedRoom));
+    if (!isSavedHost && !player?.exists()) return;
+    button.textContent = isSavedHost ? `Resume hosting · ${savedRoom}` : `Rejoin as ${player.data().name} · $${Number(player.data().score || 0).toLocaleString()}`;
+    button.hidden = false;
+    button.onclick = () => { isHost = isSavedHost; history.replaceState({}, "", `?room=${savedRoom}${isHost ? "&host=1" : ""}`); enterRoom(savedRoom); };
+  } catch { button.hidden = true; }
+}
 
 const roundValues = [[100, 200, 300, 400, 500], [200, 400, 600, 800, 1000]];
 function editorCategory(roundIndex, name = "", clues = null) {
@@ -55,16 +70,33 @@ async function saveDeck() {
 }
 async function createRoom(deckId) {
   const ref = deckRef(deckId), snap = await getDoc(ref); if (!snap.exists()) { say("That board is no longer available."); return; }
-  deck = snap.data(); roomId = newCode(); isHost = true; playerId = user.uid; history.replaceState({}, "", `?room=${roomId}&host=1`);
+  deck = snap.data(); isHost = true; playerId = user.uid;
   deck.rounds ||= [{ name: "Jeopardy!", values: roundValues[0], categories: deck.categories }, { name: "Double Jeopardy!", values: roundValues[1], categories: [] }];
   const labels = deck.rounds[0].categories.map((c) => c.name);
-  await setDoc(gameRef(), { hostUid: user.uid, deckId, name: deck.name, phase: "lobby", roundIndex: 0, categories: labels, values: roundValues[0], completed: [], current: null, buzzedBy: null, buzzAt: null, activePlayer: null, finalCategory: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  let created = false;
+  for (let attempt = 0; attempt < 5 && !created; attempt++) {
+    roomId = newCode();
+    const room = gameRef();
+    try {
+      created = await runTransaction(db, async (tx) => {
+        if ((await tx.get(room)).exists()) return false;
+        tx.set(room, { hostUid: user.uid, deckId, name: deck.name, phase: "lobby", roundIndex: 0, categories: labels, values: roundValues[0], completed: [], current: null, buzzedBy: null, buzzAt: null, activePlayer: null, finalCategory: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        return true;
+      });
+    } catch (e) {
+      // A used code for a non-lobby room is deliberately unreadable to outsiders.
+      // Treat that permission response as a collision and choose another code.
+      if (e.code !== "permission-denied") throw e;
+    }
+  }
+  if (!created) { say("Couldn't reserve a room code. Please try again."); return; }
+  history.replaceState({}, "", `?room=${roomId}&host=1`);
   await setDoc(doc(db, "jeopardyGames", roomId, "private", "board"), { rounds: deck.rounds, final: deck.final });
   await setDoc(playerRef(user.uid), { name: "Host", score: 0, joinedAt: serverTimestamp(), isHost: true });
   enterRoom(roomId);
 }
 function enterRoom(id) {
-  roomId = id.toUpperCase(); playerId = isHost ? user.uid : localStorage.getItem(`jeopardy:${roomId}`) || user.uid; myFinalSubmitted = false; checkedFinalRoom = ""; show("room"); $("room-title").textContent = "Game night"; $("room-kicker").textContent = `ROOM ${roomId}`; $("code-display").textContent = roomId;
+  roomId = id.toUpperCase(); playerId = isHost ? user.uid : localStorage.getItem(`jeopardy:${roomId}`) || user.uid; localStorage.setItem("jeopardy:lastRoom", roomId); localStorage.setItem("jeopardy:lastHost", isHost ? "1" : "0"); if (!isHost) localStorage.setItem(`jeopardy:${roomId}`, user.uid); myFinalSubmitted = false; checkedFinalRoom = ""; show("room"); $("room-title").textContent = "Game night"; $("room-kicker").textContent = `ROOM ${roomId}`; $("code-display").textContent = roomId;
   offGame?.(); offPlayers?.(); offReplies?.();
   offGame = onSnapshot(gameRef(), (snap) => { if (!snap.exists()) { say("Room not found or game ended."); show("home"); return; } game = snap.data(); if (game.hostUid === user.uid && params.get("host") === "1") isHost = true; renderRoom(); if (!isHost && game.phase === "final" && checkedFinalRoom !== roomId) { checkedFinalRoom = roomId; getDoc(doc(db, "jeopardyGames", roomId, "responses", user.uid)).then((response) => { myFinalSubmitted = response.exists(); renderControls(); }); } }, (e) => say(e.message));
   offPlayers = onSnapshot(collection(db, "jeopardyGames", roomId, "players"), (snap) => { players = snap.docs.map((d) => ({ id: d.id, ...d.data() })); renderRoom(); }, (e) => say(e.message));
@@ -104,7 +136,11 @@ async function selectClue(col, row) {
   if (!deck) { const snap = await getDoc(doc(db, "jeopardyGames", roomId, "private", "board")); deck = snap.data(); }
   const roundIndex = game.roundIndex || 0, q = deck.rounds[roundIndex].categories[col].clues[row], key = `${roundIndex}:${col}:${row}`;
   const next = { roundIndex, col, row, key, question: q.question, value: q.value, dailyDouble: q.dailyDouble, bonusPoints: q.bonusPoints || 0 };
-  await updateDoc(gameRef(), { current: next, buzzedBy: null, buzzAt: null, phase: q.dailyDouble ? "daily-wager" : "clue", updatedAt: serverTimestamp() });
+  const previous = game;
+  game = { ...game, current: next, buzzedBy: null, buzzAt: null, lockedOutPlayers: [], phase: q.dailyDouble ? "daily-wager" : "clue" };
+  renderRoom();
+  try { await updateDoc(gameRef(), { current: next, buzzedBy: null, buzzAt: null, lockedOutPlayers: [], phase: game.phase, updatedAt: serverTimestamp() }); }
+  catch (e) { game = previous; renderRoom(); say(`Couldn't open that clue: ${e.message}`); }
 }
 function renderClue() {
   const box = $("clue"), active = ["clue", "daily-wager", "final"].includes(game.phase); box.hidden = !active;
@@ -123,7 +159,7 @@ function renderControls() {
       const wager = document.createElement("input"); wager.type = "number"; wager.min = "0"; wager.value = String(game.current.value); wager.setAttribute("aria-label", "Daily Double wager");
       const set = document.createElement("button"); set.className = "primary"; set.textContent = "Set wager & reveal"; set.onclick = () => setDailyWager(select.value, Number(wager.value)); tools.append(select, wager, set);
     }
-    if (game.phase === "clue" && !game.buzzedBy) { const pass = document.createElement("button"); pass.className = "quiet"; pass.textContent = "No one got it · next clue"; pass.onclick = () => resolveClue(null, 0); tools.append(pass); }
+    if (game.phase === "clue" && !game.buzzedBy) { const pass = document.createElement("button"); pass.className = "quiet"; pass.textContent = game.lockedOutPlayers?.length ? "No one else · next clue" : "No one got it · next clue"; pass.onclick = () => resolveClue(null, 0); tools.append(pass); }
     if (game.phase === "clue" && game.buzzedBy) {
       const who = players.find((p) => p.id === game.buzzedBy), amount = game.current.wager ?? game.current.value;
       const correct = document.createElement("button"); correct.className = "primary"; correct.textContent = `Correct · +$${amount}`; correct.onclick = () => resolveClue(game.buzzedBy, amount);
@@ -132,10 +168,11 @@ function renderControls() {
       tools.append(correct, wrong, reveal); if (who) { const label = document.createElement("span"); label.className = "buzz-result"; label.textContent = `${who.name} buzzed first`; tools.prepend(label); if (game.current.bonusPoints > 0 && !game.current.bonusAwarded) { const bonus = document.createElement("button"); bonus.className = "secondary"; bonus.textContent = `Award +$${game.current.bonusPoints} bonus`; bonus.onclick = () => awardBonus(game.buzzedBy, game.current.bonusPoints); tools.append(bonus); } }
     }
     if (game.phase === "final") renderFinalHost(tools);
-    if (game.phase === "finished") { const again = document.createElement("button"); again.className = "primary"; again.textContent = "Back to my boards"; again.onclick = () => { offGame?.(); offPlayers?.(); show("home"); loadDecks(); }; tools.append(again); }
+    if (game.phase === "finished") { const again = document.createElement("button"); again.className = "primary"; again.textContent = "Back to my boards"; again.onclick = () => { offGame?.(); offPlayers?.(); history.replaceState({}, "", location.pathname); show("home"); loadDecks(); loadResumeButton(); }; tools.append(again); }
     host.append(tools);
   } else {
-    if (game.phase === "clue" && !game.buzzedBy && (!game.current.dailyDouble || game.activePlayer === user.uid)) { const buzz = document.createElement("button"); buzz.className = "buzz"; buzz.textContent = "BUZZ IN"; buzz.onclick = buzzIn; player.append(buzz); }
+    if (game.phase === "clue" && !game.buzzedBy && !(game.lockedOutPlayers || []).includes(user.uid) && (!game.current.dailyDouble || game.activePlayer === user.uid)) { const buzz = document.createElement("button"); buzz.className = "buzz"; buzz.textContent = "BUZZ IN"; buzz.onclick = buzzIn; player.append(buzz); }
+    else if (game.phase === "clue" && !game.buzzedBy && (game.lockedOutPlayers || []).includes(user.uid)) { const status = document.createElement("p"); status.className = "empty"; status.textContent = "You already answered this clue. Wait for the next one."; player.append(status); }
     else if (game.phase === "clue" && game.buzzedBy) { const status = document.createElement("p"); status.className = "empty"; status.textContent = game.buzzedBy === user.uid ? "You buzzed first! Answer out loud." : `${players.find((p) => p.id === game.buzzedBy)?.name || "Someone"} buzzed first.`; player.append(status); }
     if (game.phase === "daily-wager" && game.activePlayer === user.uid) { const wrap = document.createElement("form"); wrap.className = "host-tools"; const input = document.createElement("input"); input.type = "number"; input.min = "0"; input.placeholder = "Your wager"; input.required = true; const btn = document.createElement("button"); btn.className = "primary"; btn.textContent = "Submit wager"; wrap.append(input, btn); wrap.onsubmit = (e) => { e.preventDefault(); submitWager(Number(input.value)); }; player.append(wrap); }
     if (game.phase === "final" && !myFinalSubmitted) player.append(finalResponseForm());
@@ -143,12 +180,19 @@ function renderControls() {
   }
 }
 async function buzzIn() {
-  try { await runTransaction(db, async (tx) => { const ref = gameRef(), snap = await tx.get(ref), data = snap.data(); if (!snap.exists() || data.phase !== "clue" || data.buzzedBy || (data.current?.dailyDouble && data.activePlayer !== user.uid)) throw new Error("Too late — someone buzzed first or this Daily Double is assigned to another player."); tx.update(ref, { buzzedBy: user.uid, buzzAt: serverTimestamp(), updatedAt: serverTimestamp() }); }); }
+  try { await runTransaction(db, async (tx) => { const ref = gameRef(), snap = await tx.get(ref), data = snap.data(); if (!snap.exists() || data.phase !== "clue" || data.buzzedBy || (data.lockedOutPlayers || []).includes(user.uid) || (data.current?.dailyDouble && data.activePlayer !== user.uid)) throw new Error("Too late — someone buzzed first, you already answered, or this Daily Double is assigned to another player."); tx.update(ref, { buzzedBy: user.uid, buzzAt: serverTimestamp(), updatedAt: serverTimestamp() }); }); }
   catch (e) { say(e.message.includes("Too late") ? e.message : "Buzz did not connect. Try once more."); }
 }
 async function resolveClue(uid, delta) {
   if (uid && delta) await updateDoc(playerRef(uid), { score: Number(players.find((p) => p.id === uid)?.score || 0) + delta });
-  const done = [...new Set([...(game.completed || []), game.current.key])], updates = { phase: "board", completed: done, current: null, buzzedBy: null, buzzAt: null, activePlayer: null, updatedAt: serverTimestamp() };
+  const lockedOutPlayers = uid && delta < 0 ? [...new Set([...(game.lockedOutPlayers || []), uid])] : [...(game.lockedOutPlayers || [])];
+  const canRebuzz = delta < 0 && !game.current.dailyDouble && players.some((p) => !p.isHost && !lockedOutPlayers.includes(p.id));
+  if (canRebuzz) {
+    await updateDoc(gameRef(), { phase: "clue", lockedOutPlayers, buzzedBy: null, buzzAt: null, updatedAt: serverTimestamp() });
+    say("Incorrect. Other players can buzz in.");
+    return;
+  }
+  const done = [...new Set([...(game.completed || []), game.current.key])], updates = { phase: "board", completed: done, current: null, buzzedBy: null, buzzAt: null, lockedOutPlayers: [], activePlayer: null, updatedAt: serverTimestamp() };
   if ((game.roundIndex || 0) === 0 && done.filter((key) => key.startsWith("0:")).length >= 30) { updates.roundIndex = 1; updates.categories = deck.rounds[1].categories.map((c) => c.name); updates.values = roundValues[1]; }
   await updateDoc(gameRef(), updates);
 }
@@ -214,14 +258,14 @@ $("add-category-0").onclick = () => { if ($("categories-0").querySelectorAll(".c
 $("add-category-1").onclick = () => { if ($("categories-1").querySelectorAll(".category-editor").length >= 6) return say("Up to six categories per round."); editorCategory(1); };
 $("import-board").onclick = importMarkdown;
 $("save-deck").onclick = saveDeck;
-$("join-form").onsubmit = async (e) => { e.preventDefault(); const id = $("room-code").value.trim().toUpperCase(); const existing = localStorage.getItem(`jeopardy:${id}`); if (existing) { playerId = existing; isHost = false; enterRoom(id); } else { const name = prompt("What name should appear on the scoreboard?"); if (name?.trim()) joinRoom(id, name); } };
+$("join-form").onsubmit = async (e) => { e.preventDefault(); const id = $("room-code").value.trim().toUpperCase(); if (![4, 8].includes(id.length) || !/^[A-Z0-9]+$/.test(id)) return say("Enter the 4-character room code."); const existing = localStorage.getItem(`jeopardy:${id}`); if (existing) { const p = await getDoc(playerRef(existing, id)); if (p.exists() && confirm(`Rejoin as ${p.data().name} with $${Number(p.data().score || 0).toLocaleString()}? Your score is saved.`)) { playerId = existing; isHost = false; enterRoom(id); } else { const name = prompt("What name should appear on the scoreboard?"); if (name?.trim()) joinRoom(id, name); } } else { const name = prompt("What name should appear on the scoreboard?"); if (name?.trim()) joinRoom(id, name); } };
 $("player-form").onsubmit = (e) => { e.preventDefault(); joinRoom(roomId, $("player-name").value); };
 $("start-board").onclick = () => { const eligible = players.filter((p) => !p.isHost); if (!eligible.length) return say("At least one player needs to join first."); updateDoc(gameRef(), { phase: "board", updatedAt: serverTimestamp() }); };
 $("copy-link").onclick = async () => { await navigator.clipboard.writeText(`${location.origin}/jeopardy/?room=${roomId}`); say("Invite link copied."); };
-$("leave-room").onclick = () => { offGame?.(); offPlayers?.(); offReplies?.(); game = null; deck = null; isHost = false; show("home"); loadDecks(); };
+$("leave-room").onclick = () => { if (!confirm("Leave this game and return to your boards? Your player and score will stay saved. Choose “Rejoin as…” on this page to come back.")) return; offGame?.(); offPlayers?.(); offReplies?.(); game = null; deck = null; players = []; replies = []; isHost = false; history.replaceState({}, "", location.pathname); show("home"); loadDecks(); loadResumeButton(); };
 const params = new URLSearchParams(location.search);
 if (!Object.values(config).every(Boolean)) { $("connection").textContent = "Game setup needs Firebase configuration"; say("The game service is not configured yet."); }
 else {
   const app = initializeApp(config, "jeopardy"); const auth = getAuth(app); db = getFirestore(app);
-  setPersistence(auth, browserLocalPersistence).then(() => auth.authStateReady()).then(() => auth.currentUser || signInAnonymously(auth).then((cred) => cred.user)).then((currentUser) => { user = currentUser; $("connection").textContent = "Connected · live game sync"; return params.get("room") ? (isHost = params.get("host") === "1", enterRoom(params.get("room"))) : loadDecks(); }).catch((e) => { $("connection").textContent = "Connection issue"; say(e.message); });
+  setPersistence(auth, browserLocalPersistence).then(() => auth.authStateReady()).then(() => auth.currentUser || signInAnonymously(auth).then((cred) => cred.user)).then((currentUser) => { user = currentUser; $("connection").textContent = "Connected · live game sync"; return params.get("room") ? (isHost = params.get("host") === "1", enterRoom(params.get("room"))) : Promise.all([loadDecks(), loadResumeButton()]); }).catch((e) => { $("connection").textContent = "Connection issue"; say(e.message); });
 }

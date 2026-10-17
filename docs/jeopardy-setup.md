@@ -12,9 +12,9 @@ The `/jeopardy/` app uses the Firebase web configuration already present for Run
 ## How a game works
 
 - A host builds or imports a two-round board (2–6 categories per round, five clues per category, plus one saved Final Jeopardy clue) and saves it to their anonymous account. Each board is stored as a JSON-shaped Firestore document with `rounds`, `categories`, `clues`, and `final`; host-only answer keys stay in Firestore and are copied into a private room snapshot when a game starts.
-- Starting a game creates an eight-character room code and invite link. Friends join with a display name on their phones.
+- Starting a game creates a four-character room code and invite link. Existing eight-character rooms remain joinable. Returning players on the same browser can rejoin as their saved player with their existing score.
 - The host picks a clue and reads it aloud. Phone buzzes attempt a Firestore transaction on the shared room document; concurrent buzzes serialize, and only the first transaction accepted by Firestore claims the clue.
-- The host judges spoken answers, reveals responses, and awards or deducts points. Final responses and wagers are private to the host and the submitting player until adjudication.
+- The host judges spoken answers, reveals responses, and awards or deducts points. An incorrect response locks that player out of the current clue and lets the other eligible players buzz; a correct answer or exhausted buzzes closes the clue. Leaving asks for confirmation and preserves the player's room record and score. Final responses and wagers are private to the host and the submitting player until adjudication.
 - Room and response documents remain in Firestore after a game; saved boards persist with the host's browser account. Anonymous accounts are browser/device-specific, so clearing site data can make saved boards inaccessible.
 
 ## Limits to know
