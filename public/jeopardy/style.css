@@ -3,4 +3,4 @@
 .import-box,.round-section{border:1px solid #ffffff20;border-radius:16px;padding:18px;margin:22px 0;background:#101b3955}.import-box textarea{width:100%;min-height:130px;resize:vertical}.round-section h2{margin:.2em 0 .8em;font-family:"Playfair Display",serif}.bonus-field{margin:0;font-size:12px}.bonus-field input{padding:8px}
 
 /* Give standalone controls consistent separation while preserving tile alignment. */
-button{margin:4px}.section-head{gap:16px}.actions form{gap:12px}.host-tools{gap:14px}.deck-row{gap:16px}.board button{margin:0}@media(max-width:660px){.deck-row{flex-wrap:wrap;justify-content:flex-start}.deck-row strong{width:100%}}
+button{margin:6px}.section-head{gap:16px}.actions{gap:18px}.actions form{gap:14px}.host-tools{gap:16px}.deck-row{display:grid;grid-template-columns:minmax(160px,1fr) repeat(3,minmax(72px,auto));gap:12px}.deck-row button{margin:0}.board button{margin:0}@media(max-width:660px){.deck-row{grid-template-columns:repeat(2,minmax(0,1fr))}.deck-row strong{grid-column:1/-1}.deck-row button{width:100%}}
