@@ -10,8 +10,8 @@ button{margin:6px}.section-head{gap:16px}.actions{gap:18px}.actions form{gap:14p
 #home h1{font-size:clamp(40px,8vw,76px)}
 #home .actions>button,#home .actions form button{margin:8px}
 #home .actions form{gap:18px}
-#home #room-code{background:#0e1934!important;color:#fff!important;border:2px solid #859de9;caret-color:#fff}
-#home #room-code::placeholder{color:#aebad9;opacity:1;letter-spacing:.04em}
+#home #room-code{width:190px;background:#0e1934!important;color:#fff!important;border:2px solid #859de9;caret-color:#fff}
+#home #room-code::placeholder{color:#aebad9;opacity:1;font-size:12px;letter-spacing:.02em}
 #home #room-code:-webkit-autofill,#home #room-code:-webkit-autofill:hover,#home #room-code:-webkit-autofill:focus{ -webkit-text-fill-color:#fff;-webkit-box-shadow:0 0 0 1000px #0e1934 inset;caret-color:#fff }
 #home .deck-row{column-gap:20px;row-gap:16px}
 @media(max-width:660px){#home .actions{gap:14px}#home .actions form{gap:12px}#home .actions>button,#home .actions form button{margin:4px}#home .deck-row{column-gap:16px;row-gap:14px}}
