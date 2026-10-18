@@ -73,7 +73,7 @@ async function createRoom(deckId) {
   deck = snap.data(); isHost = true; playerId = user.uid;
   deck.rounds ||= [{ name: "Jeopardy!", values: roundValues[0], categories: deck.categories }, { name: "Double Jeopardy!", values: roundValues[1], categories: [] }];
   const labels = deck.rounds[0].categories.map((c) => c.name);
-  let created = false;
+  let created = false, codeReadDenied = false;
   for (let attempt = 0; attempt < 5 && !created; attempt++) {
     roomId = newCode();
     const room = gameRef();
@@ -87,9 +87,10 @@ async function createRoom(deckId) {
       // A used code for a non-lobby room is deliberately unreadable to outsiders.
       // Treat that permission response as a collision and choose another code.
       if (e.code !== "permission-denied") throw e;
+      codeReadDenied = true;
     }
   }
-  if (!created) { say("Couldn't reserve a room code. Please try again."); return; }
+  if (!created) { say(codeReadDenied ? "Room-code check was denied. The Firestore rules need updating." : "Couldn't find an available room code. Please try again."); return; }
   history.replaceState({}, "", `?room=${roomId}&host=1`);
   await setDoc(doc(db, "jeopardyGames", roomId, "private", "board"), { rounds: deck.rounds, final: deck.final });
   await setDoc(playerRef(user.uid), { name: "Host", score: 0, joinedAt: serverTimestamp(), isHost: true });
