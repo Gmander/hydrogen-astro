@@ -8,9 +8,10 @@ button{margin:6px}.section-head{gap:16px}.actions{gap:18px}.actions form{gap:14p
 /* Give the home actions room to breathe and keep room codes legible in autofill. */
 #home .actions{gap:24px}
 #home h1{font-size:clamp(40px,8vw,76px)}
+#home button{padding:13px 18px}
 #home .actions>button,#home .actions form button{margin:8px}
 #home .actions form{gap:18px}
-#home #room-code{width:190px;background:#0e1934!important;color:#fff!important;border:2px solid #859de9;caret-color:#fff}
+#home #room-code{width:190px;padding:13px 14px;background:#0e1934!important;color:#fff!important;border:2px solid #859de9;caret-color:#fff}
 #home #room-code::placeholder{color:#aebad9;opacity:1;font-size:12px;letter-spacing:.02em}
 #home #room-code:-webkit-autofill,#home #room-code:-webkit-autofill:hover,#home #room-code:-webkit-autofill:focus{ -webkit-text-fill-color:#fff;-webkit-box-shadow:0 0 0 1000px #0e1934 inset;caret-color:#fff }
 #home .deck-row{column-gap:20px;row-gap:16px}
