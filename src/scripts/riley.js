@@ -36,6 +36,7 @@ const sizeLabel = (size) => ({ small: "Small", medium: "Medium", large: "Large" 
 let selectedDay = localDay(new Date());
 let filter = "all";
 let entries = [];
+let historyEntries = [];
 let sleepSessions = [];
 let activeSleep = null;
 let undoAction = null;
@@ -45,6 +46,8 @@ let db;
 let currentUser;
 let members = [];
 let stopEntries;
+let stopHistory;
+let historyWindowDay;
 let stopMembership;
 let stopMembers;
 let stopSleep;
@@ -96,6 +99,104 @@ function sleepDurationForDay(sessions, dayStart, dayEnd) {
   return hours ? `${hours}h ${remainder}m` : `${remainder}m`;
 }
 
+function sleepMinutesInRange(sessions, start, end, now = new Date()) {
+  const milliseconds = sessions.reduce((total, session) => {
+    const sleepStart = new Date(session.time);
+    const sleepEnd = session.endTime ? new Date(session.endTime) : now;
+    const overlapStart = Math.max(sleepStart.getTime(), start.getTime());
+    const overlapEnd = Math.min(sleepEnd.getTime(), end.getTime(), now.getTime());
+    return total + Math.max(0, overlapEnd - overlapStart);
+  }, 0);
+  return Math.round(milliseconds / 60000);
+}
+
+function dayMetrics(records, day, elapsedMs, now = new Date()) {
+  const start = new Date(`${day}T00:00:00`);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  const cutoff = new Date(Math.min(end.getTime(), start.getTime() + elapsedMs));
+  const dayRecords = records.filter((entry) => localDay(new Date(entry.time)) === day);
+  const sleeps = records.filter((entry) => entry.type === "sleep");
+  const tracked = dayRecords.length > 0 || sleeps.some((session) => {
+    const sleepStart = new Date(session.time);
+    const sleepEnd = session.endTime ? new Date(session.endTime) : now;
+    return sleepStart < end && sleepEnd > start;
+  });
+  const current = records.filter((entry) => {
+    const time = new Date(entry.time);
+    return time >= start && time < cutoff;
+  });
+  return {
+    tracked,
+    sleepMinutes: sleepMinutesInRange(sleeps, start, cutoff, now),
+    feeds: current.filter((entry) => entry.type === "feed").length,
+    diapers: current.filter((entry) => ["wee", "poo", "both"].includes(entry.type)).length,
+  };
+}
+
+function renderAverages(dayEntries) {
+  const now = new Date();
+  const today = localDay(now);
+  const isToday = selectedDay === today;
+  const selectedStart = new Date(`${selectedDay}T00:00:00`);
+  const elapsedMs = isToday ? Math.max(0, now.getTime() - selectedStart.getTime()) : 86400000;
+  const records = demo ? entries : [...historyEntries, ...dayEntries, ...sleepSessions];
+  const uniqueRecords = [...new Map(records.map((entry) => [entry.id, entry])).values()];
+  const current = dayMetrics(uniqueRecords, selectedDay, elapsedMs, now);
+  $("average-title").textContent = isToday ? "Today vs. usual" : "Day vs. usual";
+  $("average-legend-day").textContent = isToday ? "Today so far" : "Selected day";
+  const currentLabel = isToday ? "so far" : "total";
+  const averageLabel = isToday ? "average by now" : "daily average";
+  ["sleep", "feeds", "diapers"].forEach((key) => {
+    $(`average-${key}-current-label`).textContent = currentLabel;
+    $(`average-${key}-mean-label`).textContent = averageLabel;
+  });
+  const previousDays = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(selectedStart);
+    date.setDate(date.getDate() - 7 + index);
+    return localDay(date);
+  });
+  const daily = previousDays.map((day) => dayMetrics(uniqueRecords, day, elapsedMs, now)).filter((day) => day.tracked);
+  const average = daily.length ? {
+    sleepMinutes: daily.reduce((sum, day) => sum + day.sleepMinutes, 0) / daily.length,
+    feeds: daily.reduce((sum, day) => sum + day.feeds, 0) / daily.length,
+    diapers: daily.reduce((sum, day) => sum + day.diapers, 0) / daily.length,
+  } : null;
+  $("average-period").textContent = demo ? "Sample 7-day history" : daily.length ? `${daily.length} of 7 days logged` : "Building your baseline";
+  $("average-context").textContent = isToday
+    ? "Today so far compared with the same time on previous days."
+    : `${new Date(`${selectedDay}T12:00:00`).toLocaleDateString([], { month: "long", day: "numeric" })} compared with the previous 7 days.`;
+  $("average-metrics").hidden = !average;
+  $("average-empty").hidden = Boolean(average);
+  if (!average) {
+    $("average-description").textContent = "There are not enough previous logged days to calculate an average yet.";
+    return;
+  }
+  const metrics = [
+    { key: "sleep", current: current.sleepMinutes, average: average.sleepMinutes, max: 1440, scale: "24h", format: (value) => {
+      const minutes = Math.round(value);
+      const hours = Math.floor(minutes / 60);
+      const remainder = minutes % 60;
+      return hours ? `${hours}h ${remainder}m` : `${remainder}m`;
+    } },
+    { key: "feeds", current: current.feeds, average: average.feeds, max: Math.max(10, Math.ceil(Math.max(current.feeds, average.feeds, 1) / 2) * 2), format: (value) => String(Math.round(value * 10) / 10) },
+    { key: "diapers", current: current.diapers, average: average.diapers, max: Math.max(10, Math.ceil(Math.max(current.diapers, average.diapers, 1) / 2) * 2), format: (value) => String(Math.round(value * 10) / 10) },
+  ];
+  const values = [];
+  metrics.forEach(({ key, current: value, average: mean, max, scale, format }) => {
+    const currentRatio = Math.min(100, (value / max) * 100);
+    const averageRatio = Math.min(100, (mean / max) * 100);
+    $(`average-${key}-current`).textContent = format(value);
+    $(`average-${key}-mean`).textContent = format(mean);
+    $(`average-${key}-bar`).style.width = `${currentRatio}%`;
+    $(`average-${key}-tick`).style.left = `${averageRatio}%`;
+    $(`average-${key}-scale`).textContent = scale || String(max);
+    values.push(`${key === "sleep" ? "Sleep" : key === "feeds" ? "Feeds" : "Diapers"}: ${format(value)} ${currentLabel}, compared with ${format(mean)} ${averageLabel} across ${daily.length} logged days.`);
+  });
+  const comparison = isToday ? "at the same time of day" : "over the full day";
+  $("average-description").textContent = `${values.join(" ")} Comparisons use the previous seven calendar days with at least one recorded event, ${comparison}.`;
+}
+
 function lastFeedLabel(feed) {
   if (!feed) return "No feed recorded";
   if (feed.method === "bottle") return "Bottle";
@@ -107,6 +208,50 @@ function lastFeedLabel(feed) {
   }
   if (side === "Left" || side === "Right") return `${side} Breast`;
   return "Breast";
+}
+
+function renderRhythm(dayEntries, dayStart, dayEnd) {
+  const sleepTrack = $("rhythm-sleep-track");
+  const diaperTrack = $("rhythm-diaper-track");
+  const sessions = dayEntries.filter((entry) => entry.type === "sleep");
+  const diapers = dayEntries.filter((entry) => ["wee", "poo", "both"].includes(entry.type)).sort((a, b) => new Date(a.time) - new Date(b.time));
+  const dayLength = dayEnd - dayStart;
+  const now = new Date();
+  const selectedDate = new Date(`${selectedDay}T12:00:00`);
+  const dateLabel = selectedDate.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+  $("rhythm-date").textContent = dateLabel;
+  $("rhythm-chart").setAttribute("aria-label", `Sleep periods and diaper times for ${dateLabel}`);
+  sleepTrack.replaceChildren();
+  diaperTrack.replaceChildren();
+  const sleepDescriptions = [];
+  sessions.forEach((session) => {
+    const start = new Date(session.time);
+    const end = session.endTime ? new Date(session.endTime) : now;
+    const clippedStart = new Date(Math.max(start.getTime(), dayStart.getTime()));
+    const clippedEnd = new Date(Math.min(end.getTime(), dayEnd.getTime(), now.getTime()));
+    if (clippedEnd <= clippedStart) return;
+    const span = element("span", "rhythm-sleep-span");
+    const left = ((clippedStart - dayStart) / dayLength) * 100;
+    const width = ((clippedEnd - clippedStart) / dayLength) * 100;
+    span.style.left = `${left}%`;
+    span.style.width = `${width}%`;
+    span.title = `Sleep ${timeLabel(clippedStart)}–${timeLabel(clippedEnd)}`;
+    span.setAttribute("aria-hidden", "true");
+    sleepTrack.append(span);
+    sleepDescriptions.push(`${timeLabel(clippedStart)} to ${timeLabel(clippedEnd)}`);
+  });
+  diapers.forEach((entry, index) => {
+    const marker = element("span", `rhythm-marker ${entry.type}`);
+    marker.style.left = `${((new Date(entry.time) - dayStart) / dayLength) * 100}%`;
+    marker.style.top = `${6 + (index % 3) * 16}px`;
+    marker.title = `${names[entry.type]} at ${timeLabel(entry.time)}`;
+    marker.setAttribute("aria-hidden", "true");
+    diaperTrack.append(marker);
+  });
+  if (!sessions.length) sleepTrack.append(element("span", "rhythm-empty", "No sleep recorded"));
+  if (!diapers.length) diaperTrack.append(element("span", "rhythm-empty", "No diapers recorded"));
+  const diaperDescriptions = diapers.map((entry) => `${names[entry.type]} at ${timeLabel(entry.time)}`);
+  $("rhythm-description").textContent = `Sleep periods: ${sleepDescriptions.length ? sleepDescriptions.join("; ") : "none recorded"}. Diapers: ${diaperDescriptions.length ? diaperDescriptions.join("; ") : "none recorded"}.`;
 }
 
 function detail(entry) {
@@ -200,7 +345,149 @@ function render() {
   });
   const latest = dayEntries.find((entry) => entry.type === "feed");
   $("last-feed").textContent = lastFeedLabel(latest);
+  renderRhythm(dayEntries, dayStart, dayEnd);
+  renderAverages(dayEntries);
+  renderSleepTrends(dayEntries);
   renderSleepAction();
+}
+
+function sleepDurationText(minutes) {
+  if (!Number.isFinite(minutes) || minutes <= 0) return "0m";
+  const rounded = Math.round(minutes);
+  const hours = Math.floor(rounded / 60);
+  const remainder = rounded % 60;
+  return hours ? hours + "h " + String(remainder).padStart(2, "0") + "m" : rounded + "m";
+}
+
+function sleepClockText(minutes) {
+  const dayMinute = ((Math.round(minutes) + 18 * 60) % 1440 + 1440) % 1440;
+  return new Date(2020, 0, 1, Math.floor(dayMinute / 60), dayMinute % 60).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function renderSleepTrends(dayEntries) {
+  const now = new Date();
+  const selectedDate = new Date(selectedDay + "T12:00:00");
+  const isToday = selectedDay === localDay(now);
+  const records = demo ? entries : [...historyEntries, ...dayEntries, ...sleepSessions];
+  const sessions = [...new Map(records.filter((entry) => entry.type === "sleep").map((entry) => [entry.id, entry])).values()]
+    .map((entry) => ({ ...entry, start: new Date(entry.time), end: entry.endTime ? new Date(entry.endTime) : now }));
+  const dayLength = 24 * 60 * 60 * 1000;
+  const days = Array.from({ length: isToday ? 15 : 14 }, (_, index) => {
+    const date = new Date(selectedDate);
+    date.setDate(date.getDate() - (isToday ? 14 : 13) + index);
+    const windowStart = new Date(date);
+    windowStart.setDate(windowStart.getDate() - 1);
+    windowStart.setHours(18, 0, 0, 0);
+    const windowEnd = new Date(date);
+    windowEnd.setHours(18, 0, 0, 0);
+    const nightCutoff = new Date(windowStart.getTime() + 12 * 60 * 60 * 1000);
+    const nightEnd = new Date(windowStart.getTime() + 18 * 60 * 60 * 1000);
+    const visibleEnd = new Date(Math.min(windowEnd.getTime(), now.getTime()));
+    const segments = [];
+    let totalMinutes = 0;
+    let nightMinutes = 0;
+    let hasCompletedNight = false;
+    sessions.forEach((session) => {
+      const start = new Date(Math.max(session.start.getTime(), windowStart.getTime()));
+      const end = new Date(Math.min(session.end.getTime(), visibleEnd.getTime()));
+      if (end <= start) return;
+      const duration = (end - start) / 60000;
+      totalMinutes += duration;
+      const night = session.start >= windowStart && session.start < nightCutoff;
+      if (night && session.endTime) {
+        const nightOverlap = Math.max(0, Math.min(session.end.getTime(), nightEnd.getTime(), now.getTime()) - Math.max(session.start.getTime(), windowStart.getTime()));
+        if (nightOverlap > 0) {
+          nightMinutes += nightOverlap / 60000;
+          hasCompletedNight = true;
+        }
+      }
+      segments.push({ start, end, night, complete: Boolean(session.endTime), title: timeLabel(start) + "–" + timeLabel(end) + (night ? " night sleep" : " nap") });
+    });
+    const bedtimeCandidates = sessions.filter((session) => session.endTime && session.start >= windowStart && session.start < nightCutoff).sort((a, b) => a.start - b.start);
+    const morningCandidates = sessions.filter((session) => session.endTime && session.start >= nightCutoff && session.start < nightEnd).sort((a, b) => a.start - b.start);
+    const bedtime = bedtimeCandidates[0]?.start || morningCandidates[0]?.start || null;
+    const bedtimeMinutes = bedtime ? (bedtime.getTime() - windowStart.getTime()) / 60000 : null;
+    return { date, windowStart, windowEnd, segments, totalMinutes, nightMinutes, hasCompletedNight, bedtime, bedtimeMinutes };
+  });
+
+  const periodStart = days[0].date.toLocaleDateString([], { month: "short", day: "numeric" });
+  const periodEnd = days[days.length - 1].date.toLocaleDateString([], { month: "short", day: "numeric" });
+  $("sleep-trend-period").textContent = demo ? "Sample pattern · 14 days" : periodStart + "–" + periodEnd;
+  const completedTrendDays = isToday ? days.slice(0, 14) : days;
+  const olderDays = completedTrendDays.slice(0, 7);
+  const recentDays = completedTrendDays.slice(-7);
+  const mean = (values) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+  const olderBedtime = mean(olderDays.map((day) => day.bedtimeMinutes).filter(Number.isFinite));
+  const recentBedtime = mean(recentDays.map((day) => day.bedtimeMinutes).filter(Number.isFinite));
+  const olderNightSleep = mean(olderDays.filter((day) => day.hasCompletedNight).map((day) => day.nightMinutes));
+  const recentNightSleep = mean(recentDays.filter((day) => day.hasCompletedNight).map((day) => day.nightMinutes));
+  const insights = $("sleep-trend-insights");
+  insights.replaceChildren();
+  const addInsight = (label, value, detail) => {
+    const card = element("div", "sleep-trend-insight");
+    card.append(element("span", "sleep-trend-insight-label", label), element("strong", "", value), element("small", "", detail));
+    insights.append(card);
+  };
+  if (olderBedtime !== null && recentBedtime !== null) {
+    const change = olderBedtime - recentBedtime;
+    const direction = change > 1 ? Math.round(change) + "m earlier" : change < -1 ? Math.round(Math.abs(change)) + "m later" : "about the same";
+    addInsight("Bedtime", sleepClockText(olderBedtime) + " → " + sleepClockText(recentBedtime), direction + " · first 7 vs. most recent 7");
+  } else addInsight("Bedtime", "Building a pattern", "Need more completed nights");
+  if (olderNightSleep !== null && recentNightSleep !== null) {
+    const change = recentNightSleep - olderNightSleep;
+    const direction = Math.abs(change) < 2 ? "about the same" : (change > 0 ? "+" : "−") + sleepDurationText(Math.abs(change));
+    addInsight("Night sleep", sleepDurationText(olderNightSleep) + " → " + sleepDurationText(recentNightSleep), direction + " · first 7 vs. most recent 7");
+  } else addInsight("Night sleep", "Building a pattern", "Need more completed nights");
+  const napStartDays = new Map();
+  const trackedSleepDays = completedTrendDays.filter((day) => day.segments.some((segment) => segment.complete)).length;
+  completedTrendDays.forEach((day) => {
+    const dateKey = localDay(day.date);
+    day.segments.filter((segment) => !segment.night && segment.complete).forEach((segment) => {
+      const minute = segment.start.getHours() * 60 + segment.start.getMinutes();
+      if (minute < 11 * 60 || minute >= 15 * 60) return;
+      const bucket = (Math.round(minute / 30) * 30) % 1440;
+      if (!napStartDays.has(bucket)) napStartDays.set(bucket, new Set());
+      napStartDays.get(bucket).add(dateKey);
+    });
+  });
+  const typicalNap = [...napStartDays.entries()].sort((a, b) => b[1].size - a[1].size)[0];
+  if (typicalNap && typicalNap[1].size >= 3) {
+    const napMinute = typicalNap[0];
+    const napTime = new Date(2020, 0, 1, Math.floor(napMinute / 60), napMinute % 60).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    addInsight("Midday nap", napTime, typicalNap[1].size + " of " + trackedSleepDays + " logged sleep days");
+  } else addInsight("Midday nap", "Still emerging", "Need more repeated midday naps");
+
+  const chart = $("sleep-trend-chart");
+  chart.replaceChildren();
+  const accessibleRows = [];
+  days.forEach((day) => {
+    const key = localDay(day.date);
+    const isToday = key === localDay(now);
+    const dateLabel = isToday ? "Today" : day.date.toLocaleDateString([], { month: "numeric", day: "numeric" });
+    const row = element("div", "sleep-trend-row");
+    row.append(element("span", "sleep-trend-day", dateLabel));
+    const track = element("div", "sleep-trend-track");
+    track.setAttribute("aria-hidden", "true");
+    day.segments.forEach((segment) => {
+      const bar = element("span", "sleep-trend-period " + (segment.night ? "night" : "nap"));
+      bar.style.left = ((segment.start - day.windowStart) / dayLength) * 100 + "%";
+      bar.style.width = ((segment.end - segment.start) / dayLength) * 100 + "%";
+      bar.title = segment.title;
+      track.append(bar);
+    });
+    row.append(track, element("span", "sleep-trend-total", day.totalMinutes ? sleepDurationText(day.totalMinutes) : "—"));
+    chart.append(row);
+    accessibleRows.push(dateLabel + ": " + (day.segments.length ? day.segments.map((segment) => segment.title).join(", ") : "no sleep logged") + "; total " + (day.totalMinutes ? sleepDurationText(day.totalMinutes) : "none"));
+  });
+  const axis = element("div", "sleep-trend-axis");
+  axis.append(element("span", "", ""));
+  const labels = element("div", "sleep-trend-axis-labels");
+  ["6 PM", "12 AM", "6 AM", "12 PM", "6 PM"].forEach((label) => labels.append(element("span", "", label)));
+  axis.append(labels, element("span", "", ""));
+  chart.append(axis);
+  const bedtimeSummary = olderBedtime !== null && recentBedtime !== null ? "Bedtime average changed from " + sleepClockText(olderBedtime) + " to " + sleepClockText(recentBedtime) + ". " : "Bedtime trend is still building. ";
+  const nightSummary = olderNightSleep !== null && recentNightSleep !== null ? "Night sleep average changed from " + sleepDurationText(olderNightSleep) + " to " + sleepDurationText(recentNightSleep) + ". " : "Night sleep trend is still building. ";
+  $("sleep-trends-description").textContent = "Fourteen completed sleep-day rows, each from 6 PM through the next day at 6 PM" + (isToday ? ", plus today's in-progress row" : "") + ". Dark bars are overnight sleep and pale bars are naps. " + bedtimeSummary + nightSummary + accessibleRows.join(" ");
 }
 
 function renderSleepAction() {
@@ -518,11 +805,40 @@ function seedDemo() {
     { type: "sleep", endTime: null, person: "Kane" },
     { type: "feed", method: "breast", side: "Right", rightMinutes: 15, startedSide: "Right", person: "Kane" },
   ];
-  entries = sample.map((entry, i) => {
+  const currentDayEntries = sample.map((entry, i) => {
     const time = new Date(now.getTime() - elapsed * (0.08 + i * 0.15));
     const endTime = entry.type === "sleep" ? new Date(Math.min(time.getTime() + 40 * 60000, now.getTime())).toISOString() : undefined;
     return { id: crypto.randomUUID(), note: "", ...entry, time: time.toISOString(), endTime };
   });
+  const history = [];
+  for (let daysAgo = 1; daysAgo <= 14; daysAgo += 1) {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo);
+    const dayAt = (dayOffset, hour, minute) => new Date(day.getFullYear(), day.getMonth(), day.getDate() + dayOffset, hour, minute);
+    const variation = daysAgo % 3;
+    const trend = 14 - daysAgo;
+    const add = (type, time, endTime, extra = {}) => history.push({ id: crypto.randomUUID(), type, time: time.toISOString(), endTime: endTime?.toISOString() || null, note: "", person: "Kane", ...extra });
+    const bedtimeMinute = 30 - trend * 3;
+    const bedtimeHour = 22 + Math.floor(bedtimeMinute / 60);
+    const normalizedBedtimeMinute = (bedtimeMinute + 60) % 60;
+    const wakeMinute = 45 + trend * 3;
+    add("sleep", dayAt(-1, bedtimeHour, normalizedBedtimeMinute), dayAt(0, 5 + Math.floor(wakeMinute / 60), wakeMinute % 60));
+    add("sleep", dayAt(0, 9, 15 + variation * 5), dayAt(0, 10, variation * 5));
+    add("sleep", dayAt(0, 13, variation * 5), dayAt(0, 14, 45 + variation * 5));
+    add("sleep", dayAt(0, 16, 15 + variation * 5), dayAt(0, 17, variation * 5));
+    add("wee", dayAt(0, 5, 20), null, { wetSize: "large" });
+    add("both", dayAt(0, 9, 0), null, { wetSize: "large", stoolSize: "small" });
+    add("both", dayAt(0, 13, 10), null, { wetSize: "large", stoolSize: "large" });
+    add("both", dayAt(0, 18, 55), null, { wetSize: "medium", stoolSize: "small" });
+    add("both", dayAt(0, 22, 30), null, { wetSize: "medium", stoolSize: "large" });
+    add("feed", dayAt(0, 0, 3 + variation * 4), null, { method: "breast", side: "Left", startedSide: "Left", leftMinutes: 8 });
+    add("both", dayAt(0, 0, 10 + variation * 4), null, { wetSize: "small", stoolSize: "medium" });
+    [5, 8, 10, 12, 14, 17, 20, 23].forEach((hour, index) => {
+      add("feed", dayAt(0, hour, index % 2 ? 45 : 15), null, index % 3 === 0
+        ? { method: "bottle", amount: 75 }
+        : { method: "breast", side: index % 2 ? "Left" : "Right", startedSide: index % 2 ? "Left" : "Right", leftMinutes: index % 2 ? 8 : 0, rightMinutes: index % 2 ? 0 : 8 });
+    });
+  }
+  entries = [...currentDayEntries, ...history];
   activeSleep = null;
   selectedDay = localDay(now);
   filter = "all";
@@ -541,6 +857,7 @@ function mapFirestoreEvent(eventDoc) {
 
 function subscribeToDay() {
   stopEntries?.();
+  subscribeToHistory();
   const start = new Date(`${selectedDay}T00:00:00`);
   const end = new Date(`${selectedDay}T00:00:00`);
   end.setDate(end.getDate() + 1);
@@ -554,6 +871,26 @@ function subscribeToDay() {
     console.error("Riley records could not be loaded", error);
     setStatus("Could not load Riley records. Check Firebase setup and access.", "error");
     notify("Could not load shared moments. Try refreshing.");
+  });
+}
+
+function subscribeToHistory() {
+  if (demo || !db || historyWindowDay === selectedDay) return;
+  historyWindowDay = selectedDay;
+  stopHistory?.();
+  historyEntries = [];
+  const start = new Date(`${selectedDay}T00:00:00`);
+  start.setDate(start.getDate() - 8);
+  const end = new Date(`${selectedDay}T00:00:00`);
+  const events = collection(db, "households", "riley", "events");
+  const historyQuery = query(events, where("time", ">=", Timestamp.fromDate(start)), where("time", "<", Timestamp.fromDate(end)), orderBy("time", "desc"));
+  stopHistory = onSnapshot(historyQuery, (snapshot) => {
+    historyEntries = snapshot.docs.map(mapFirestoreEvent);
+    render();
+  }, (error) => {
+    console.error("Riley history could not be loaded", error);
+    historyEntries = [];
+    render();
   });
 }
 
@@ -653,8 +990,11 @@ function initializeHousehold(user) {
   stopMembership = onSnapshot(memberRef, (memberSnapshot) => {
     if (!memberSnapshot.exists()) {
       stopEntries?.();
+      stopHistory?.();
       stopMembers?.();
       stopSleep?.();
+      historyEntries = [];
+      historyWindowDay = null;
       $("access-pending").hidden = false;
       $("auth-uid").textContent = user.uid;
       $("sign-in-panel").hidden = false;
@@ -733,9 +1073,12 @@ if (!configValues.some(Boolean)) {
       if (!user) {
         currentUser = undefined;
         members = [];
+        historyEntries = [];
+        historyWindowDay = null;
         sleepSessions = [];
         activeSleep = null;
         stopEntries?.();
+        stopHistory?.();
         stopMembership?.();
         stopMembers?.();
         stopSleep?.();
@@ -964,6 +1307,46 @@ function changeDay(offset) {
   selectedDay = localDay(date);
   if (demo) render(); else if (currentUser && !$("tracker-app").hidden) subscribeToDay();
 }
+
+function setupGraphCarousel() {
+  const viewport = $("graph-carousel-viewport");
+  const slides = [...document.querySelectorAll("[data-graph-slide-panel]")];
+  const buttons = [...document.querySelectorAll("[data-graph-slide]")];
+  if (!viewport || slides.length < 2 || buttons.length !== slides.length) return;
+
+  let frame = 0;
+  const updateCurrentSlide = () => {
+    frame = 0;
+    const width = Math.max(viewport.clientWidth, 1);
+    const index = Math.max(0, Math.min(slides.length - 1, Math.round(viewport.scrollLeft / width)));
+    buttons.forEach((button, buttonIndex) => button.setAttribute("aria-pressed", String(buttonIndex === index)));
+    slides.forEach((slide, slideIndex) => {
+      const inactive = slideIndex !== index;
+      slide.setAttribute("aria-hidden", String(inactive));
+      slide.inert = inactive;
+    });
+    viewport.style.height = `${slides[index].offsetHeight}px`;
+  };
+
+  buttons.forEach((button, index) => button.addEventListener("click", () => {
+    const behavior = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    viewport.scrollTo({ left: index * viewport.clientWidth, behavior });
+  }));
+  viewport.addEventListener("scroll", () => {
+    if (!frame) frame = requestAnimationFrame(updateCurrentSlide);
+  }, { passive: true });
+  viewport.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    const activeIndex = buttons.findIndex((button) => button.getAttribute("aria-pressed") === "true");
+    const nextIndex = (activeIndex + (event.key === "ArrowRight" ? 1 : -1) + slides.length) % slides.length;
+    buttons[nextIndex].click();
+  });
+  window.addEventListener("resize", updateCurrentSlide);
+  updateCurrentSlide();
+}
+
+setupGraphCarousel();
 $("previous-day").addEventListener("click", () => changeDay(-1));
 $("next-day").addEventListener("click", () => changeDay(1));
 $("reset-demo").addEventListener("click", () => { seedDemo(); notify("Sample day restored."); });

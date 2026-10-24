@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <meta name="theme-color" content="#f8f7f2" />
   <title>Riley · Little moments</title>
-  <link rel="stylesheet" href="/riley/style.css" />
+  <link rel="stylesheet" href="/riley/style.css?v=carousel-spacing" />
   <script src="../scripts/riley.js"></script>
 </head>
 <body>
@@ -50,6 +50,45 @@
           <button class="quick-card feed" data-add="feed"><span class="event-icon" aria-hidden="true">♡</span><span><strong>Feed</strong><small>Breast or bottle</small></span><span class="plus" aria-hidden="true">+</span></button>
           <button class="quick-card wee" data-add="diaper"><span class="event-icon droplet" aria-hidden="true"></span><span><strong>Diaper</strong><small>Wee, poo, or both</small></span><span class="plus" aria-hidden="true">+</span></button>
           <button class="quick-card sleep" id="sleep-action-card" data-add="sleep"><span class="event-icon" aria-hidden="true">☾</span><span><strong id="sleep-action-title">Sleep</strong><small id="sleep-action-hint">Start or log sleep</small></span><span class="plus" aria-hidden="true">+</span></button>
+        </div>
+      </section>
+      <section class="graph-carousel-card" aria-label="Riley graphs">
+        <div class="graph-carousel-controls" role="group" aria-label="Choose a graph">
+          <button type="button" data-graph-slide="0" aria-controls="average-slide" aria-pressed="true">Today vs. usual</button>
+          <button type="button" data-graph-slide="1" aria-controls="rhythm-slide" aria-pressed="false">Day rhythm</button>
+          <button type="button" data-graph-slide="2" aria-controls="sleep-trends-slide" aria-pressed="false">Sleep trends</button>
+        </div>
+        <div class="graph-carousel-viewport" id="graph-carousel-viewport" tabindex="0" aria-label="Graph views. Use arrow keys or swipe to change graphs.">
+      <section class="average-card graph-slide" id="average-slide" data-graph-slide-panel aria-labelledby="average-title" aria-describedby="average-description">
+        <div class="average-heading"><div><p class="eyebrow">A LITTLE CONTEXT</p><h2 id="average-title">Today vs. usual</h2></div><span id="average-period">Previous 7 tracked days</span></div>
+        <p class="average-note" id="average-context">Today so far compared with the same time on previous days.</p>
+        <div class="average-legend" aria-label="Comparison legend"><span><i class="average-legend-day"></i><span id="average-legend-day">Today so far</span></span><span><i class="average-legend-average"></i>7-day average</span></div>
+        <div class="average-metrics" id="average-metrics">
+          <div class="average-metric" data-average-metric="sleep"><div class="average-metric-heading"><strong>Sleep</strong><span><b id="average-sleep-current">—</b> <small id="average-sleep-current-label">so far</small><span class="average-separator">·</span><b id="average-sleep-mean">—</b> <small id="average-sleep-mean-label">average by now</small></span></div><div class="average-track" role="presentation"><span class="average-bar sleep" id="average-sleep-bar"></span><i class="average-tick" id="average-sleep-tick"></i></div><div class="average-axis"><span>0h</span><span id="average-sleep-scale">24h</span></div></div>
+          <div class="average-metric" data-average-metric="feeds"><div class="average-metric-heading"><strong>Feeds</strong><span><b id="average-feeds-current">—</b> <small id="average-feeds-current-label">so far</small><span class="average-separator">·</span><b id="average-feeds-mean">—</b> <small id="average-feeds-mean-label">average by now</small></span></div><div class="average-track" role="presentation"><span class="average-bar feeds" id="average-feeds-bar"></span><i class="average-tick" id="average-feeds-tick"></i></div><div class="average-axis"><span>0</span><span id="average-feeds-scale">10</span></div></div>
+          <div class="average-metric" data-average-metric="diapers"><div class="average-metric-heading"><strong>Diapers</strong><span><b id="average-diapers-current">—</b> <small id="average-diapers-current-label">so far</small><span class="average-separator">·</span><b id="average-diapers-mean">—</b> <small id="average-diapers-mean-label">average by now</small></span></div><div class="average-track" role="presentation"><span class="average-bar diapers" id="average-diapers-bar"></span><i class="average-tick" id="average-diapers-tick"></i></div><div class="average-axis"><span>0</span><span id="average-diapers-scale">10</span></div></div>
+        </div>
+        <p class="average-empty" id="average-empty" hidden>Log a few more days to build a useful average.</p>
+        <p class="visually-hidden" id="average-description"></p>
+      </section>
+      <section class="rhythm-card graph-slide" id="rhythm-slide" data-graph-slide-panel aria-labelledby="rhythm-title" aria-hidden="true" inert>
+        <div class="rhythm-heading"><div><p class="eyebrow">THE DAY AT A GLANCE</p><h2 id="rhythm-title">Sleep & diaper rhythm</h2></div><span id="rhythm-date"></span></div>
+        <div class="rhythm-legend" aria-label="Chart legend"><span><i class="legend-sleep"></i>Sleep</span><span><i class="legend-wee"></i>Wee</span><span><i class="legend-poo"></i>Poo</span><span><i class="legend-both"></i>Wee + poo</span></div>
+        <div class="rhythm-chart" id="rhythm-chart" role="img" aria-label="Sleep periods and diaper times" aria-describedby="rhythm-description">
+          <div class="rhythm-lane"><strong>Sleep</strong><div class="rhythm-track" id="rhythm-sleep-track"></div></div>
+          <div class="rhythm-lane"><strong>Diapers</strong><div class="rhythm-track diaper-track" id="rhythm-diaper-track"></div></div>
+          <div class="rhythm-axis"><span></span><div><span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>12 AM</span></div></div>
+        </div>
+        <p class="visually-hidden" id="rhythm-description"></p>
+      </section>
+      <section class="sleep-trend-card graph-slide" id="sleep-trends-slide" data-graph-slide-panel aria-labelledby="sleep-trends-title" aria-describedby="sleep-trends-description" aria-hidden="true" inert>
+        <div class="sleep-trend-heading"><div><p class="eyebrow">SLEEP OVER TIME</p><h2 id="sleep-trends-title">Sleep trends</h2></div><span id="sleep-trend-period">Last 14 sleep days</span></div>
+        <p class="sleep-trend-note">Each row runs from 6 PM to 6 PM, keeping overnight sleep and daytime naps together.</p>
+        <div class="sleep-trend-insights" id="sleep-trend-insights"></div>
+        <div class="sleep-trend-legend" aria-label="Sleep graph legend"><span><i class="sleep-trend-night-key"></i>Night sleep</span><span><i class="sleep-trend-nap-key"></i>Naps</span></div>
+        <div class="sleep-trend-chart" id="sleep-trend-chart" role="img" aria-label="Sleep periods across recent days" aria-describedby="sleep-trends-description"></div>
+        <p class="visually-hidden" id="sleep-trends-description"></p>
+      </section>
         </div>
       </section>
       <div class="main-grid">
