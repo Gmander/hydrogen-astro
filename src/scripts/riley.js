@@ -81,6 +81,34 @@ function durationLabel(start, end) {
   return hours ? `${hours}h ${remainder}m` : `${remainder} min`;
 }
 
+function sleepDurationForDay(sessions, dayStart, dayEnd) {
+  const now = new Date();
+  const milliseconds = sessions.reduce((total, session) => {
+    const start = new Date(session.time);
+    const end = session.endTime ? new Date(session.endTime) : now;
+    const overlapStart = Math.max(start.getTime(), dayStart.getTime());
+    const overlapEnd = Math.min(end.getTime(), dayEnd.getTime(), now.getTime());
+    return total + Math.max(0, overlapEnd - overlapStart);
+  }, 0);
+  const minutes = Math.round(milliseconds / 60000);
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return hours ? `${hours}h ${remainder}m` : `${remainder}m`;
+}
+
+function lastFeedLabel(feed) {
+  if (!feed) return "No feed recorded";
+  if (feed.method === "bottle") return "Bottle";
+  const side = feed.side || (feed.leftMinutes && feed.rightMinutes ? "Both" : feed.leftMinutes ? "Left" : feed.rightMinutes ? "Right" : "");
+  if (side === "Both") {
+    if (feed.startedSide === "Left") return "Right Breast";
+    if (feed.startedSide === "Right") return "Left Breast";
+    return "Both Breasts";
+  }
+  if (side === "Left" || side === "Right") return `${side} Breast`;
+  return "Breast";
+}
+
 function detail(entry) {
   const parts = [];
   if (entry.type === "feed") {
@@ -157,14 +185,21 @@ function render() {
   });
   $("empty").hidden = shown.length > 0;
   $("summary").replaceChildren();
-  ["feed", "wee", "poo", "sleep"].forEach((type) => {
+  const stats = [
+    ["Feeds", dayEntries.filter((entry) => entry.type === "feed").length],
+    ["Diapers", dayEntries.filter((entry) => ["wee", "poo", "both"].includes(entry.type)).length],
+    ["Wees", dayEntries.filter((entry) => includes(entry, "wee")).length],
+    ["Poos", dayEntries.filter((entry) => includes(entry, "poo")).length],
+    ["Sleep sessions", dayEntries.filter((entry) => entry.type === "sleep").length],
+    ["Hours slept", sleepDurationForDay(dayEntries.filter((entry) => entry.type === "sleep"), dayStart, dayEnd)],
+  ];
+  stats.forEach(([label, value]) => {
     const row = element("div", "stat-row");
-    const label = type === "sleep" ? "Sleep sessions" : `${names[type]}s`;
-    row.append(element("span", "", label), element("strong", "", String(dayEntries.filter((entry) => includes(entry, type)).length)));
+    row.append(element("span", "", label), element("strong", "", String(value)));
     $("summary").append(row);
   });
   const latest = dayEntries.find((entry) => entry.type === "feed");
-  $("last-feed").textContent = latest ? `${timeLabel(latest.time)} · ${latest.method === "bottle" ? "Bottle" : "Breast"}` : "No feed recorded";
+  $("last-feed").textContent = lastFeedLabel(latest);
   renderSleepAction();
 }
 
