@@ -1,9 +1,9 @@
 {
   "sites": {
     "fieldnote-preview-test": {
-      "title": "Fieldnote Studio — Preview Test",
-      "updatedAt": "2026-11-05T19:02:40.876Z",
-      "note": "Restored an earlier version",
+      "title": "Fieldnote Studio — DPS Live Test",
+      "updatedAt": "2026-11-05T21:01:45.237Z",
+      "note": "DPS production publishing verification",
       "banner": null
     }
   }
