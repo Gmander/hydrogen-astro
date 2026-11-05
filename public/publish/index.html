@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Publish a page · Runtime Ready</title>
+  <link rel="stylesheet" href="/publish/style.css">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="/publish/">Runtime Ready <span>Publish</span></a>
+    <div class="who" id="who" hidden><span id="who-email"></span><button class="link" id="sign-out" type="button">Sign out</button></div>
+  </header>
+
+  <main>
+    <section id="screen-loading" class="center"><p class="muted">Loading…</p></section>
+
+    <section id="screen-signin" class="center" hidden>
+      <h1>Sign in to publish</h1>
+      <p class="muted">Use the email address Aidan added for you. This device will stay signed in.</p>
+      <form id="signin-form" class="stack narrow">
+        <input id="signin-email" type="email" autocomplete="email" required placeholder="you@example.com" aria-label="Email address">
+        <input id="signin-password" type="password" autocomplete="current-password" required minlength="6" placeholder="Password" aria-label="Password">
+        <button class="primary" type="submit">Sign in</button>
+        <div class="row between">
+          <button class="link" type="button" id="create-account">First time? Create account</button>
+          <button class="link" type="button" id="forgot">Forgot password</button>
+        </div>
+      </form>
+      <p class="note" id="signin-msg" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="screen-verify" class="center" hidden>
+      <h1>Check your email</h1>
+      <p>We sent a confirmation link to <strong id="verify-email"></strong>. Open it, then come back here.</p>
+      <div class="stack narrow">
+        <button class="primary" id="verify-done" type="button">I've confirmed it</button>
+        <button class="link" id="verify-resend" type="button">Send it again</button>
+      </div>
+      <p class="note" id="verify-msg" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="screen-denied" class="center" hidden>
+      <h1>Almost there</h1>
+      <p>This account (<strong id="denied-email"></strong>) hasn't been set up for publishing yet. Send that address to Aidan and he'll add it.</p>
+    </section>
+
+    <section id="screen-error" class="center" hidden>
+      <h1>Publishing isn't ready</h1>
+      <p class="muted" id="error-msg"></p>
+    </section>
+
+    <section id="screen-app" hidden>
+      <div id="view-list">
+        <div class="row between">
+          <div><h1>Your pages</h1><p class="muted" id="list-sub"></p></div>
+          <button class="primary" id="new-page" type="button">New page</button>
+        </div>
+        <div class="cards" id="cards"></div>
+        <p class="muted" id="empty" hidden>Nothing published yet. Choose <strong>New page</strong> to start.</p>
+      </div>
+
+      <div id="view-edit" hidden>
+        <button class="link" id="back" type="button">← Your pages</button>
+        <h1 id="edit-title">New page</h1>
+        <div class="edit-grid">
+          <form id="edit-form" class="stack" autocomplete="off">
+            <label for="site-name">Page name</label>
+            <input id="site-name" type="text" maxlength="60" placeholder="e.g. Fieldnote pitch" required>
+            <p class="url"><span id="url-preview"></span> <span id="name-state" class="state" role="status"></span></p>
+
+            <label for="html">Page HTML</label>
+            <div class="drop" id="drop">
+              <textarea id="html" spellcheck="false" placeholder="Paste the exported HTML here, or drop the .html file onto this box"></textarea>
+              <div class="row">
+                <label class="button ghost" for="file">Choose file</label>
+                <input type="file" id="file" accept=".html,.htm,text/html" hidden>
+                <span class="muted" id="file-name">In Claude Design, ask for an "HTML5 single file".</span>
+              </div>
+            </div>
+
+            <label for="note">What changed? <span class="muted">(optional)</span></label>
+            <input id="note" type="text" maxlength="120" placeholder="e.g. New headline from the owner">
+
+            <div class="row"><button class="primary" id="publish" type="submit">Publish</button><span class="muted" id="publish-hint"></span></div>
+            <div class="msg" id="msg" role="status" aria-live="polite" hidden></div>
+          </form>
+
+          <aside>
+            <div class="row between">
+              <h2>Preview</h2>
+              <div class="seg" role="group" aria-label="Preview size">
+                <button type="button" class="on" data-size="phone">Phone</button>
+                <button type="button" data-size="desktop">Desktop</button>
+              </div>
+            </div>
+            <div class="frame phone" id="frame"><iframe id="preview" title="Page preview" sandbox="allow-scripts allow-popups allow-forms"></iframe></div>
+            <div id="versions-wrap" hidden>
+              <h2>Versions</h2>
+              <ul class="versions" id="versions"></ul>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/publish/app.js"></script>
+</body>
+</html>
