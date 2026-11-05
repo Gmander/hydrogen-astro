@@ -4,7 +4,7 @@
     "base_url": "https://runtimeready.com",
     "base_path": "/",
     "trailing_slash": false,
-    "favicon": "/images/headshot_river_crop2.jpg"
+    "favicon": "/favicon.svg?v=rr-b1"
   },
   "settings": {
     "pagination": 6,
