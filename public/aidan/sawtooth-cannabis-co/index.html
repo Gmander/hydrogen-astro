@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sawtooth Cannabis Co.</title>
+<meta name="description" content="Small-batch cannabis cultivated with mountain-clean water. Lab-tested, honestly labeled, made for Idaho.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#12201A; --panel:#1A2C23; --panel2:#24392E;
+  --cream:#F2EBDC; --muted:#C9C2B2; --amber:#E8B36A; --ink:#12201A; --ph:#9FB3A6;
+  --display:'Bricolage Grotesque',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--cream);font-family:Inter,system-ui,sans-serif;line-height:1.5}
+a{color:var(--cream);text-decoration:none}
+a:hover{color:var(--amber)}
+h1,h2,h3{font-family:var(--display);margin:0}
+p{margin:0}
+.wrap{max-width:1280px;margin:0 auto;padding-left:24px;padding-right:24px}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--amber)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 30px;border-radius:999px;font-weight:600;font-size:15px;border:1.5px solid transparent;cursor:pointer;font-family:inherit}
+.btn-amber{background:var(--amber);color:var(--ink)}
+.btn-amber:hover{color:var(--ink);filter:brightness(1.08)}
+.btn-ghost{border-color:rgba(242,235,220,.4)}
+.ph{background:var(--panel2);border:1px dashed rgba(242,235,220,.25);color:var(--ph);display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:15px}
+
+/* age gate */
+#gate{position:fixed;inset:0;z-index:50;background:rgba(10,18,14,.94);display:flex;align-items:center;justify-content:center;padding:24px}
+#gate[hidden]{display:none}
+.gate-card{background:var(--cream);color:var(--ink);max-width:440px;width:100%;border-radius:20px;padding:40px 32px;text-align:center;display:flex;flex-direction:column;gap:16px}
+.gate-card h2{font-weight:800;font-size:28px;line-height:1.1}
+.gate-card p{font-size:15px;color:#3B4A42}
+.gate-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.gate-actions .btn{min-height:48px;padding:0 28px}
+.gate-yes{background:var(--ink);color:var(--cream)}
+.gate-yes:hover{color:var(--cream)}
+.gate-no{border-color:var(--ink);color:var(--ink)}
+.gate-no:hover{color:var(--ink)}
+
+/* header */
+header{border-bottom:1px solid rgba(242,235,220,.12)}
+nav{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding-top:20px;padding-bottom:20px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:-.01em}
+.brand span{color:var(--amber)}
+.navlinks{display:flex;flex-wrap:wrap;align-items:center;gap:28px;font-size:15px;font-weight:500}
+.navlinks .cta{background:var(--amber);color:var(--ink);padding:12px 22px;border-radius:999px;font-weight:600}
+.navlinks .cta:hover{color:var(--ink)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:56px;align-items:center;padding-top:96px;padding-bottom:80px}
+.hero-copy{display:flex;flex-direction:column;gap:28px}
+.hero h1{font-weight:800;font-size:clamp(48px,7vw,92px);line-height:.95;letter-spacing:-.03em}
+.hero p.lead{font-size:19px;line-height:1.6;color:var(--muted);max-width:520px}
+.hero-actions{display:flex;flex-wrap:wrap;gap:14px}
+.hero .ph{aspect-ratio:4/5;border-radius:28px;background:#1D3328}
+
+.strip{background:var(--amber);color:var(--ink)}
+.strip .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px 32px;padding-top:22px;padding-bottom:22px;font-weight:600;font-size:15px}
+
+section{scroll-margin-top:16px}
+.section-pad{padding-top:112px;padding-bottom:112px}
+.section-head{display:flex;flex-direction:column;gap:12px;margin-bottom:48px;max-width:640px}
+.section-head h2{font-weight:800;font-size:clamp(36px,4.5vw,56px);letter-spacing:-.02em;line-height:1}
+.menu-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:48px}
+.menu-head .section-head{margin-bottom:0}
+.menu-head a{font-weight:600}
+
+/* menu */
+.cats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:20px}
+.cat{background:var(--panel);border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:18px;transition:transform .2s}
+.cat:hover{transform:translateY(-4px)}
+.cat .ph{aspect-ratio:1;border-radius:14px;font-size:13px}
+.cat-body{display:flex;flex-direction:column;gap:6px;padding:0 6px 8px}
+.cat-name{font-family:var(--display);font-weight:700;font-size:24px;color:var(--cream)}
+.cat-desc{font-size:15px;color:var(--muted)}
+.cat-price{font-size:14px;font-weight:600;color:var(--amber);margin-top:6px}
+
+/* story */
+.story{background:var(--cream);color:var(--ink)}
+.story-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:64px;align-items:center}
+.story .ph{aspect-ratio:5/4;border-radius:28px;background:#DCD3BF;color:#5A5A4C;border:0}
+.story-copy{display:flex;flex-direction:column;gap:22px}
+.story .eyebrow{color:#8A5A1E}
+.story h2{font-weight:800;font-size:clamp(34px,4vw,52px);letter-spacing:-.02em;line-height:1.02}
+.story p{font-size:18px;line-height:1.65;color:#3B4A42}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:12px;border-top:1px solid rgba(18,32,26,.15);padding-top:24px}
+.stat b{display:block;font-family:var(--display);font-weight:800;font-size:32px}
+.stat span{font-size:14px;color:#3B4A42}
+
+/* learn */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px}
+.step{border:1px solid rgba(242,235,220,.16);border-radius:22px;padding:32px;display:flex;flex-direction:column;gap:14px}
+.step .num{font-family:var(--display);font-weight:800;font-size:40px;color:var(--amber)}
+.step h3{font-size:24px}
+.step p{font-size:16px;line-height:1.6;color:var(--muted)}
+
+/* visit */
+.visit{background:var(--panel);border-radius:32px;padding:clamp(32px,5vw,64px);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:48px}
+.visit-copy{display:flex;flex-direction:column;gap:24px}
+.visit h2{font-weight:800;font-size:clamp(34px,4vw,52px);letter-spacing:-.02em;line-height:1}
+.addr{font-size:17px}
+.addr b{display:block}
+.addr span{color:var(--muted)}
+.hours{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 24px;font-size:16px;color:var(--muted);max-width:360px}
+.hours em{font-style:normal;color:var(--cream)}
+form{display:flex;flex-direction:column;gap:10px;margin-top:8px;max-width:440px}
+form label{font-size:14px;font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+input[type=email]{flex:1 1 220px;min-height:50px;padding:0 18px;border-radius:999px;border:1px solid rgba(242,235,220,.3);background:var(--bg);color:var(--cream);font:400 15px Inter,sans-serif}
+input[type=email]:focus-visible,.btn:focus-visible,a:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
+form .btn{min-height:50px;padding:0 26px}
+#thanks{font-size:14px;color:var(--amber)}
+.map{min-height:320px;border-radius:22px}
+
+footer{border-top:1px solid rgba(242,235,220,.12)}
+.foot{display:flex;flex-direction:column;gap:24px;padding-top:48px;padding-bottom:48px}
+.foot-top{display:flex;flex-wrap:wrap;justify-content:space-between;gap:24px;align-items:center}
+.foot-links{display:flex;flex-wrap:wrap;gap:24px;font-size:14px}
+.legal{font-size:13px;line-height:1.6;color:#A8A190;max-width:900px}
+
+@media (max-width:640px){
+  .navlinks{gap:18px}
+  .hero{padding-top:56px}
+  .section-pad{padding-top:72px;padding-bottom:72px}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.cat{transition:none}}
+</style>
+</head>
+<body>
+
+<div id="gate" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+  <div class="gate-card">
+    <h2 id="gate-title">Are you 21 or older?</h2>
+    <p>You must be of legal age to enter this site.</p>
+    <div class="gate-actions">
+      <button type="button" class="btn gate-yes" id="gate-yes">Yes, I'm 21+</button>
+      <a class="btn gate-no" href="https://www.google.com">No</a>
+    </div>
+  </div>
+</div>
+
+<header>
+  <nav class="wrap" aria-label="Main">
+    <a href="#top" class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="#E8B36A" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 28 L12 12 L17 20 L22 8 L31 28 Z"/><path d="M19 15 L22 8 L25 15"/></svg>
+      <div>Sawtooth <span>Cannabis Co.</span></div>
+    </a>
+    <div class="navlinks">
+      <a href="#shop">Shop</a>
+      <a href="#story">Our Story</a>
+      <a href="#visit">Visit</a>
+      <a href="#learn">Learn</a>
+      <a href="#visit" class="cta">Order for pickup</a>
+    </div>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="wrap hero">
+    <div class="hero-copy">
+      <p class="eyebrow">Rooted in the Gem State</p>
+      <h1>High-country craft, grown with care.</h1>
+      <p class="lead">Small-batch cannabis cultivated with mountain-clean water and a farmer's patience. Lab-tested, honestly labeled, and made for Idaho.</p>
+      <div class="hero-actions">
+        <a href="#shop" class="btn btn-amber">Browse the menu</a>
+        <a href="#story" class="btn btn-ghost">Meet the growers</a>
+      </div>
+    </div>
+    <div class="ph" role="img" aria-label="Hero photo placeholder">[HERO PHOTO — greenhouse with the Sawtooth range behind]</div>
+  </section>
+
+  <div class="strip">
+    <div class="wrap">
+      <span>Third-party lab tested</span>
+      <span>Pesticide-free cultivation</span>
+      <span>Small-batch, hand-trimmed</span>
+      <span>21+ with valid ID</span>
+    </div>
+  </div>
+
+  <section id="shop" class="wrap section-pad">
+    <div class="menu-head">
+      <div class="section-head">
+        <p class="eyebrow">The menu</p>
+        <h2>Find your trail.</h2>
+      </div>
+      <a href="#visit">See full menu →</a>
+    </div>
+    <div class="cats">
+      <a href="#visit" class="cat">
+        <div class="ph">[PHOTO — flower jar]</div>
+        <div class="cat-body"><span class="cat-name">Flower</span><span class="cat-desc">Slow-cured, hand-trimmed buds across indica, sativa and hybrid.</span><span class="cat-price">From [PRICE]</span></div>
+      </a>
+      <a href="#visit" class="cat">
+        <div class="ph">[PHOTO — pre-roll pack]</div>
+        <div class="cat-body"><span class="cat-name">Pre-rolls</span><span class="cat-desc">Whole-flower joints, singles and packs, ready to go.</span><span class="cat-price">From [PRICE]</span></div>
+      </a>
+      <a href="#visit" class="cat">
+        <div class="ph">[PHOTO — gummies]</div>
+        <div class="cat-body"><span class="cat-name">Edibles</span><span class="cat-desc">Measured doses in gummies and chocolate. Start low, go slow.</span><span class="cat-price">From [PRICE]</span></div>
+      </a>
+      <a href="#visit" class="cat">
+        <div class="ph">[PHOTO — tincture bottle]</div>
+        <div class="cat-body"><span class="cat-name">Tinctures</span><span class="cat-desc">Precise, smoke-free drops with clear THC:CBD ratios.</span><span class="cat-price">From [PRICE]</span></div>
+      </a>
+    </div>
+  </section>
+
+  <section id="story" class="story">
+    <div class="wrap section-pad">
+      <div class="story-grid">
+        <div class="ph" role="img" aria-label="Founders photo placeholder">[PHOTO — founders in the grow room]</div>
+        <div class="story-copy">
+          <p class="eyebrow">Our story</p>
+          <h2>Idaho born. Idaho grown.</h2>
+          <p>[YOUR STORY — who founded the company, where you grow, and why you started. Two or three sentences that sound like you.]</p>
+          <p>Every batch is grown in living soil, slow-cured, and tested by an independent lab before it ever reaches a shelf.</p>
+          <div class="stats">
+            <div class="stat"><b>[YEAR]</b><span>Founded</span></div>
+            <div class="stat"><b>[#]</b><span>Strains grown</span></div>
+            <div class="stat"><b>[CITY]</b><span>Home base</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="learn" class="wrap section-pad">
+    <div class="section-head">
+      <p class="eyebrow">Learn</p>
+      <h2>New here? Start slow.</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><span class="num">01</span><h3>Read the label</h3><p>THC and CBD content, batch number and lab results are printed on every package. Scan the QR code for the full report.</p></div>
+      <div class="step"><span class="num">02</span><h3>Ask our staff</h3><p>Our team can walk you through product types, effects and what to expect — no question is too basic.</p></div>
+      <div class="step"><span class="num">03</span><h3>Consume responsibly</h3><p>Edibles can take up to two hours to take effect. Never drive impaired, and keep all products away from kids and pets.</p></div>
+    </div>
+  </section>
+
+  <section id="visit" class="wrap" style="padding-bottom:112px">
+    <div class="visit">
+      <div class="visit-copy">
+        <h2>Come see us.</h2>
+        <div class="addr"><b>[STREET ADDRESS]</b><span>[CITY], Idaho [ZIP]</span><br><span>[PHONE]</span></div>
+        <div class="hours">
+          <span>Mon – Thu</span><em>[HOURS]</em>
+          <span>Fri – Sat</span><em>[HOURS]</em>
+          <span>Sunday</span><em>[HOURS]</em>
+        </div>
+        <form id="signup">
+          <label for="email">Get drops and events by email</label>
+          <div class="row">
+            <input id="email" type="email" required placeholder="you@example.com" autocomplete="email">
+            <button type="submit" class="btn btn-amber">Sign up</button>
+          </div>
+          <p id="thanks" role="status" hidden>Thanks — you're on the list.</p>
+        </form>
+      </div>
+      <div class="ph map" role="img" aria-label="Map placeholder">[MAP EMBED]</div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div class="foot-top">
+      <div class="brand">Sawtooth <span>Cannabis Co.</span></div>
+      <div class="foot-links">
+        <a href="#shop">Shop</a><a href="#story">Our Story</a><a href="#learn">Learn</a><a href="#visit">Contact</a><a href="#top">Privacy</a>
+      </div>
+    </div>
+    <p class="legal">For use only by adults 21 and older. Keep out of reach of children. Do not operate a vehicle or machinery under the influence. This product has not been evaluated by the FDA. License #[LICENSE NUMBER]. © <span id="yr">[YEAR]</span> Sawtooth Cannabis Co.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var gate = document.getElementById('gate');
+  var KEY = 'sawtooth-age-ok';
+  var ok = false;
+  try { ok = sessionStorage.getItem(KEY) === '1'; } catch(e){}
+  if (ok) { gate.hidden = true; }
+  else { document.body.style.overflow = 'hidden'; document.getElementById('gate-yes').focus(); }
+  document.getElementById('gate-yes').addEventListener('click', function(){
+    gate.hidden = true;
+    document.body.style.overflow = '';
+    try { sessionStorage.setItem(KEY, '1'); } catch(e){}
+  });
+
+  document.getElementById('yr').textContent = new Date().getFullYear();
+
+  document.getElementById('signup').addEventListener('submit', function(e){
+    e.preventDefault();
+    // TODO: connect to your email provider (Mailchimp, Klaviyo, etc.)
+    document.getElementById('thanks').hidden = false;
+    this.reset();
+  });
+})();
+</script>
+</body>
+</html>
