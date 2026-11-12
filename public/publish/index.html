@@ -20,15 +20,19 @@
     <section id="screen-loading" class="center"><p class="muted">Loading…</p></section>
 
     <section id="screen-signin" class="center" hidden>
-      <h1>Sign in to publish</h1>
-      <p class="muted">Use the email address Aidan added for you. This device will stay signed in.</p>
+      <h1 id="auth-title">Sign in to publish</h1>
+      <p class="muted" id="auth-description">Use the email address Aidan added for you. This device will stay signed in.</p>
       <form id="signin-form" class="stack narrow">
+        <label id="email-label" for="signin-email">Email address</label>
         <input id="signin-email" type="email" autocomplete="email" required placeholder="you@example.com" aria-label="Email address">
-        <input id="signin-password" type="password" autocomplete="current-password" required minlength="6" placeholder="Password" aria-label="Password">
-        <button class="primary" type="submit">Sign in</button>
-        <div class="row between">
+        <label id="password-label" for="signin-password">Password</label>
+        <input id="signin-password" type="password" autocomplete="current-password" required placeholder="Password" aria-label="Password">
+        <p id="password-help" class="muted" hidden>Use at least 6 characters.</p>
+        <button class="primary" id="auth-submit" type="submit">Sign in</button>
+        <div class="auth-links">
           <button class="link" type="button" id="create-account">First time? Create account</button>
           <button class="link" type="button" id="forgot">Forgot password</button>
+          <button class="link" type="button" id="back-signin" hidden>Back to sign in</button>
         </div>
       </form>
       <p class="note" id="signin-msg" role="status" aria-live="polite"></p>

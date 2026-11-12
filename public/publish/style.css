@@ -11,7 +11,7 @@ main { max-width:1080px; margin:0 auto; padding:28px 20px 80px; }
 .muted { color:var(--muted); } .note { color:var(--muted); min-height:1.5em; }
 .stack { display:flex; flex-direction:column; gap:10px; } .narrow { max-width:360px; margin:20px auto 0; }
 .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; } .between { justify-content:space-between; }
-input[type=text], input[type=email], textarea { width:100%; padding:11px 12px; font:inherit; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:8px; }
+input[type=text], input[type=email], input[type=password], textarea { width:100%; padding:11px 12px; font:inherit; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:8px; }
 input:focus, textarea:focus, button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 textarea { min-height:180px; resize:vertical; font:12.5px/1.4 ui-monospace, Consolas, monospace; }
 label { font-weight:600; margin-top:6px; } label.button { margin:0; }
@@ -46,3 +46,9 @@ button, .button { font:inherit; cursor:pointer; }
 .versions li { display:flex; gap:10px; align-items:center; padding:8px 0; border-top:1px solid var(--line); font-size:14px; }
 .versions .what { flex:1; min-width:0; } .versions .when { color:var(--muted); font-size:12.5px; }
 .badge { background:#e6f3ec; color:var(--ok); border-radius:99px; padding:1px 9px; font-size:12px; font-weight:600; }
+
+#signin-form { text-align:left; }
+#signin-form label { margin:0; }
+#password-help { margin:0; font-size:14px; }
+.auth-links { display:flex; flex-direction:column; align-items:stretch; gap:4px; }
+.auth-links .link { min-height:44px; text-align:center; }

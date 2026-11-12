@@ -102,23 +102,55 @@ async function authStep(msgId, working, action) {
     msg.textContent = friendlyAuthError(err);
   }
 }
-const credentials = () => [$("signin-email").value.trim(), $("signin-password").value];
-
-$("signin-form").addEventListener("submit", (e) => {
+let authMode = "signin";
+let authBusy = false;
+function setAuthMode(mode) {
+  authMode = mode;
+  const reset = mode === "reset", signup = mode === "signup";
+  $("auth-title").textContent = reset ? "Reset your password" : signup ? "Create your account" : "Sign in to publish";
+  $("auth-description").textContent = reset
+    ? "Enter your account email and we'll send you a password reset link."
+    : signup ? "Create an account with the email Aidan added for you. Publishing access still needs Aidan's approval."
+    : "Use the email address Aidan added for you. This device will stay signed in.";
+  $("signin-password").hidden = reset;
+  $("signin-password").disabled = reset;
+  $("signin-password").required = !reset;
+  $("signin-password").minLength = signup ? 6 : 1;
+  $("signin-password").autocomplete = signup ? "new-password" : "current-password";
+  $("signin-password").value = "";
+  $("password-label").hidden = reset;
+  $("password-help").hidden = !signup;
+  $("auth-submit").textContent = reset ? "Send reset link" : signup ? "Create account" : "Sign in";
+  $("create-account").hidden = mode !== "signin";
+  $("forgot").hidden = mode !== "signin";
+  $("back-signin").hidden = mode === "signin";
+  $("signin-msg").textContent = "";
+  $("signin-email").focus();
+}
+$("create-account").addEventListener("click", () => setAuthMode("signup"));
+$("forgot").addEventListener("click", () => setAuthMode("reset"));
+$("back-signin").addEventListener("click", () => setAuthMode("signin"));
+$("signin-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  authStep("signin-msg", "Signing in…", () => auth.signIn(...credentials()));
-});
-$("create-account").addEventListener("click", () => {
-  if (!$("signin-form").reportValidity()) return;
-  authStep("signin-msg", "Creating your account…", () => auth.signUp(...credentials()));
-});
-$("forgot").addEventListener("click", () => {
-  const email = $("signin-email").value.trim();
-  if (!email) return ($("signin-msg").textContent = "Enter your email above first.");
-  authStep("signin-msg", "Sending…", async () => {
-    await auth.resetPassword(email);
-    return "If that email has an account, a reset link is on its way.";
-  });
+  if (authBusy) return;
+  const email = $("signin-email").value.trim(), password = $("signin-password").value, mode = authMode;
+  authBusy = true;
+  const buttons = $("signin-form").querySelectorAll("button");
+  buttons.forEach((button) => { button.disabled = true; });
+  try {
+    await authStep("signin-msg", mode === "reset" ? "Sending…" : mode === "signup" ? "Creating your account…" : "Signing in…", async () => {
+      if (mode === "reset") {
+        await auth.resetPassword(email);
+        return "If that email has an account, a reset link is on its way. Check your inbox and spam folder.";
+      }
+      if (mode === "signup") await auth.signUp(email, password);
+      else await auth.signIn(email, password);
+      return "";
+    });
+  } finally {
+    authBusy = false;
+    buttons.forEach((button) => { button.disabled = false; });
+  }
 });
 $("verify-done").addEventListener("click", () =>
   authStep("verify-msg", "Checking…", async () => {
