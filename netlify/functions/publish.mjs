@@ -13,7 +13,14 @@ export default async (req) => {
     projectId: env.PUBLIC_FIREBASE_PROJECT_ID,
     appId: env.PUBLIC_FIREBASE_APP_ID,
   };
-  const configured = Boolean(env.GITHUB_TOKEN && env.PUBLISH_UPLOADERS && apiKey);
+  const uploaders = parseUploaders(env.PUBLISH_UPLOADERS);
+  // Supplemental invites never replace an existing email or claim its folder.
+  for (const [email, username] of parseUploaders(env.PUBLISH_UPLOADERS_ADDITIONAL)) {
+    if (!uploaders.has(email) && ![...uploaders.values()].includes(username)) {
+      uploaders.set(email, username);
+    }
+  }
+  const configured = Boolean(env.GITHUB_TOKEN && uploaders.size && apiKey);
   if (!configured && new URL(req.url).searchParams.get("action") !== "config") {
     return Response.json(
       { error: "not_configured", message: "Publishing isn't set up on this site yet." },
@@ -30,7 +37,7 @@ export default async (req) => {
         branch: env.PUBLISH_BRANCH || "main",
       });
     },
-    uploaders: configured ? parseUploaders(env.PUBLISH_UPLOADERS) : new Map(),
+    uploaders: configured ? uploaders : new Map(),
     publicConfig,
   });
 };

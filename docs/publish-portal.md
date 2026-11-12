@@ -61,3 +61,5 @@ To add a person, add their `email:username` to `PUBLISH_UPLOADERS` and redeploy.
 - Netlify's function request-size limit in practice (the portal caps files at 4 MB).
 - Whether the same function works on a deploy preview with a non-production `PUBLISH_BRANCH`.
 - The create-account, confirm-email and forgot-password flow against real Firebase (only the local stand-in has run).
+
+Optional PUBLISH_UPLOADERS_ADDITIONAL uses the same email:username format for supplemental invitations when the original list is stored as an unreadable Netlify secret. Existing email assignments and usernames take precedence; conflicting additions are ignored. Set it before redeploying.
