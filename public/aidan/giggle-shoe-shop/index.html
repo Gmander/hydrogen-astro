@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#5824a5">
+<meta name="description" content="A silly, pretend shoe shop made for classroom giggles.">
+<title>The Giggle Shoe Shop</title>
+<style>
+:root{color-scheme:light;--purple:#5824a5;--ink:#331254;--yellow:#ffe65b;--paper:#fffdf4}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:ui-rounded,"Arial Rounded MT Bold","Trebuchet MS",sans-serif;font-size:20px;line-height:1.5}button{font:inherit}a{color:inherit}.skip{position:absolute;left:16px;top:-100px;background:white;padding:12px;z-index:5}.skip:focus{top:12px}header{background:var(--purple);color:white;padding:18px max(24px,calc((100% - 1160px)/2));display:flex;gap:16px;justify-content:space-between;align-items:center}.brand{font-weight:900;font-size:1.15rem}.badge{background:var(--yellow);color:var(--ink);border-radius:99px;padding:5px 16px;font-size:1rem;font-weight:bold}main{max-width:1216px;margin:auto;padding:36px 28px 24px}.intro{text-align:center;position:relative}.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:1rem;font-weight:bold;margin:0 0 10px}h1{font-size:clamp(2.6rem,6.5vw,5rem);line-height:1.02;letter-spacing:-.045em;margin:0 auto 20px;max-width:900px}h1 span{display:inline-block;background:var(--yellow);padding:0 14px 8px;border-radius:24px;transform:rotate(-2deg)}.intro p:last-child{font-size:1.4rem;margin:18px 0 28px}.products{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}.product{border:3px solid var(--ink);border-radius:26px;overflow:hidden;background:white;box-shadow:5px 6px 0 var(--ink)}.picture{height:205px;display:flex;align-items:center;justify-content:center;border-bottom:3px solid var(--ink);background:#fff08a}.product:nth-child(2) .picture{background:#e8d9ff}.product:nth-child(3) .picture{background:#f4dbff}.picture svg{width:90%;height:95%;overflow:visible}.copy{padding:20px 22px 24px}h2{font-size:1.6rem;line-height:1.15;margin:0 0 12px}.copy p{margin:0;font-size:1.15rem}.tag{display:inline-block;margin-top:18px;background:#f0e6ff;border-radius:9px;padding:3px 10px;font-weight:bold;font-size:1rem}.dance-zone{margin-top:34px;background:var(--yellow);border:3px solid var(--ink);border-radius:26px;display:grid;grid-template-columns:230px 1fr;align-items:center;gap:20px;padding:22px 36px}.stage{text-align:center;min-width:0}.dancer{display:block;width:210px;max-width:100%;height:140px;margin:auto;transform-origin:50% 85%}.shadow{width:140px;height:10px;background:#33125426;border-radius:50%;margin:auto}.dance-zone h2{font-size:1.8rem;margin-bottom:6px}.dance-zone p{margin:0 0 14px}button{cursor:pointer;border:3px solid var(--ink);border-radius:14px;background:var(--purple);color:white;padding:13px 22px;font-weight:bold;box-shadow:3px 4px 0 var(--ink);min-height:56px}button:hover{background:#421584}button:active{box-shadow:none;translate:2px 3px}:focus-visible{outline:4px solid #1a6590;outline-offset:5px}.status{display:block;min-height:1.6em;font-weight:bold;font-size:1.05rem;margin-top:12px}.wiggle{animation:wiggle .45s ease-in-out 4}.ta-da{fill:#5824a5}.pose .ta-da{fill:#d92a74}footer{text-align:center;padding:24px;font-size:1rem;font-weight:bold}svg{stroke-linecap:round;stroke-linejoin:round} .svg-defs{position:absolute;width:0;height:0;overflow:hidden}
+@keyframes wiggle{0%,100%{transform:rotate(0) translateY(0)}25%{transform:rotate(-13deg) translateY(-7px)}75%{transform:rotate(13deg) translateY(-7px)}}
+@media(max-width:760px){.products{grid-template-columns:1fr}.product{display:grid;grid-template-columns:38% 1fr}.picture{height:100%;min-height:210px;border-bottom:0;border-right:3px solid var(--ink)}.dance-zone{grid-template-columns:150px 1fr;padding:22px;gap:14px}header{padding:16px 20px}.brand{font-size:1rem}main{padding:28px 20px}.copy{padding:18px}h2{font-size:1.4rem}}
+@media(max-width:440px){header{flex-wrap:wrap;justify-content:center}.product{display:block}.picture{height:190px;min-height:0;border-right:0;border-bottom:3px solid var(--ink)}.dance-zone{grid-template-columns:1fr;text-align:center}.intro p:last-child{font-size:1.2rem}button{width:100%}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.intro h1 span{transform:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the shoes</a>
+<svg class="svg-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+<symbol id="silly-shoe" viewBox="0 0 280 180"><path d="M49 50 Q68 34 101 50 L115 88 Q150 78 189 82 Q245 83 253 120 Q261 151 214 154 L56 154 Q30 150 34 125Z" fill="#a26ae7" stroke="#331254" stroke-width="6"/><path d="M36 131 Q131 145 251 126 L249 146 Q233 163 199 162 L56 162 Q34 158 36 131" fill="#fffdf4" stroke="#331254" stroke-width="6"/><path d="M109 87 L142 106 M130 83 L163 102 M154 83 L184 101" stroke="#ffe65b" stroke-width="9"/><ellipse cx="65" cy="54" rx="26" ry="12" fill="#331254"/><circle cx="204" cy="109" r="7" fill="#331254"/><path d="M215 124 Q203 136 192 125" fill="none" stroke="#331254" stroke-width="4"/><path class="ta-da" d="m30 24 5-13 5 13 13 5-13 5-5 13-5-13-13-5Z"/><path d="m227 39 5-13 5 13 13 5-13 5-5 13-5-13-13-5Z" fill="#d92a74"/></symbol>
+</defs></svg>
+<header><div class="brand">✦ THE GIGGLE SHOE SHOP</div><span class="badge">100% pretend. 200% silly.</span></header>
+<main id="main">
+<section class="intro" aria-labelledby="title"><p class="eyebrow">Little feet. BIG giggles.</p><h1 id="title">The Giggle<br><span>Shoe Shop</span></h1><p>Step right up! Which silly shoes would you wear?</p></section>
+<section class="products" aria-label="Our three silly shoes">
+<article class="product"><div class="picture"><svg viewBox="0 0 300 190" role="img" aria-label="A smiling yellow slipper shaped like a banana"><path d="M38 49 Q63 116 136 116 Q210 118 258 54 Q256 139 193 158 Q78 193 38 49Z" fill="#ffd632" stroke="#331254" stroke-width="6"/><path d="M40 50 Q83 135 165 137 Q224 134 256 57" fill="none" stroke="#bd8500" stroke-width="4"/><path d="M40 50 33 35 43 30 51 49 M253 57 260 40 271 45 265 65" fill="#80582d" stroke="#331254" stroke-width="5"/><ellipse cx="135" cy="115" rx="39" ry="13" fill="#5824a5" stroke="#331254" stroke-width="5"/><circle cx="204" cy="122" r="5" fill="#331254"/><path d="M215 132q-9 11-18 2" fill="none" stroke="#331254" stroke-width="4"/><path d="m77 39 5-12 5 12 12 5-12 5-5 12-5-12-12-5Z" fill="#5824a5"/></svg></div><div class="copy"><h2>Banana Slippers</h2><p>Peel into a cozy pair.<br>Warning: very a-peeling!</p><span class="tag">Peel-good fashion</span></div></article>
+<article class="product"><div class="picture"><svg viewBox="0 0 300 190" role="img" aria-label="A purple rocket boot with rainbow stripes and a yellow flame"><path d="M89 134 76 177 99 164 111 181 126 136" fill="#ffe65b" stroke="#331254" stroke-width="5"/><path d="M86 28 157 28 154 94 Q223 79 249 117 L249 143 80 143Z" fill="#8850cf" stroke="#331254" stroke-width="6"/><path d="M87 48h68" stroke="#ff79aa" stroke-width="14"/><path d="M86 62h69" stroke="#ffe65b" stroke-width="14"/><path d="M85 76h70" stroke="#71dbcb" stroke-width="14"/><path d="M80 134h169v17H80Z" fill="white" stroke="#331254" stroke-width="5"/><path d="m119 95 5 10 11 2-8 8 2 11-10-5-10 5 2-11-8-8 11-2Z" fill="#ffe65b"/><circle cx="218" cy="112" r="5" fill="#331254"/><path d="M229 122q-8 9-16 1" fill="none" stroke="#331254" stroke-width="4"/><path d="m208 32 4-11 4 11 11 4-11 4-4 11-4-11-11-4Z" fill="#5824a5"/></svg></div><div class="copy"><h2>Rainbow Rocket Boots</h2><p>Count down to silly.<br>Next stop: Planet Giggle!</p><span class="tag">Out-of-this-world toes</span></div></article>
+<article class="product"><div class="picture"><svg viewBox="0 0 300 190" role="img" aria-label="A giant purple sneaker surrounded by pink and yellow bubbles"><g fill="#fff6aa" stroke="#5824a5" stroke-width="3"><circle cx="40" cy="45" r="17"/><circle cx="244" cy="39" r="23"/><circle cx="269" cy="88" r="10"/></g><g fill="white"><circle cx="35" cy="40" r="5"/><circle cx="237" cy="32" r="7"/></g><use href="#silly-shoe" x="0" y="19" width="280" height="165"/></svg></div><div class="copy"><h2>Giant Bubble Sneakers</h2><p>Big shoes. Tiny bubbles.<br>Pop, hop, giggle, repeat!</p><span class="tag">Extra-large laughs</span></div></article>
+</section>
+<section class="dance-zone" aria-labelledby="dance-title"><div class="stage"><svg id="dancer" class="dancer" viewBox="0 0 280 180" role="img" aria-label="A happy purple cartoon shoe"><use href="#silly-shoe"/></svg><div class="shadow" aria-hidden="true"></div></div><div><h2 id="dance-title">This shoe has happy feet!</h2><p>Give it a turn on the dance floor.</p><button id="dance" type="button">Make my shoe dance</button><span id="status" class="status" role="status" aria-live="polite" aria-atomic="true">Ready, set… wiggle!</span></div></section>
+</main>
+<footer>A make-believe shop for real giggles. Nothing to buy — just imagine!</footer>
+<script>
+(() => {
+  const button = document.getElementById('dance');
+  const shoe = document.getElementById('dancer');
+  const status = document.getElementById('status');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let timer;
+  let dances = 0;
+  function stop() {
+    clearTimeout(timer);
+    shoe.classList.remove('wiggle');
+  }
+  button.addEventListener('click', () => {
+    stop();
+    dances += 1;
+    if (reducedMotion.matches) {
+      shoe.classList.toggle('pose');
+      status.textContent = `Ta-da! Happy shoe pose ${dances}. Keeping still for reduced motion.`;
+      return;
+    }
+    void shoe.getBoundingClientRect();
+    shoe.classList.add('wiggle');
+    status.textContent = `Wiggle number ${dances}! Go, shoe, go!`;
+    timer = setTimeout(() => {
+      shoe.classList.remove('wiggle');
+      status.textContent = 'That was toe-tally awesome! Dance again?';
+    }, 1800);
+  });
+  reducedMotion.addEventListener('change', () => {
+    stop();
+    status.textContent = reducedMotion.matches ? 'Ready for a still, silly pose!' : 'Ready, set… wiggle!';
+  });
+})();
+</script>
+</body>
+</html>
