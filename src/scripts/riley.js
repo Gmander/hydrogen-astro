@@ -29,6 +29,10 @@ const $ = (id) => document.getElementById(id);
 const localDay = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const localInput = (date) => `${localDay(date)}T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 const timeLabel = (date) => new Date(date).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+// Keep stored amounts in ml so existing records and clients remain compatible.
+const ML_PER_OUNCE = 29.5735295625;
+const bottleOunces = (amount) => Number((Number(amount) / ML_PER_OUNCE).toFixed(2));
+const bottleMilliliters = (amount) => Number(amount) * ML_PER_OUNCE;
 const names = { feed: "Feed", wee: "Wee", poo: "Poo", both: "Wee + poo", sleep: "Sleep" };
 const symbols = { feed: "♡", wee: "♧", poo: "≋", both: "≋", sleep: "☾" };
 const includes = (entry, type) => entry.type === type || (entry.type === "both" && (type === "wee" || type === "poo"));
@@ -258,7 +262,7 @@ function detail(entry) {
   const parts = [];
   if (entry.type === "feed") {
     parts.push(entry.method === "bottle" ? "Bottle" : "Breast");
-    if (entry.method === "bottle" && entry.amount) parts.push(`${entry.amount} ml`);
+    if (entry.method === "bottle" && entry.amount) parts.push(`${bottleOunces(entry.amount)} oz`);
     if (entry.method === "breast") {
       if (entry.leftMinutes || entry.rightMinutes) {
         const sides = [];
@@ -380,8 +384,10 @@ function renderSleepTrends(dayEntries) {
     windowStart.setHours(18, 0, 0, 0);
     const windowEnd = new Date(date);
     windowEnd.setHours(18, 0, 0, 0);
-    const nightCutoff = new Date(windowStart.getTime() + 12 * 60 * 60 * 1000);
-    const nightEnd = new Date(windowStart.getTime() + 18 * 60 * 60 * 1000);
+    const nightStart = new Date(windowStart);
+    nightStart.setHours(22, 0, 0, 0);
+    const nightEnd = new Date(windowEnd);
+    nightEnd.setHours(8, 0, 0, 0);
     const visibleEnd = new Date(Math.min(windowEnd.getTime(), now.getTime()));
     const segments = [];
     let totalMinutes = 0;
@@ -393,19 +399,23 @@ function renderSleepTrends(dayEntries) {
       if (end <= start) return;
       const duration = (end - start) / 60000;
       totalMinutes += duration;
-      const night = session.start >= windowStart && session.start < nightCutoff;
-      if (night && session.endTime) {
-        const nightOverlap = Math.max(0, Math.min(session.end.getTime(), nightEnd.getTime(), now.getTime()) - Math.max(session.start.getTime(), windowStart.getTime()));
-        if (nightOverlap > 0) {
-          nightMinutes += nightOverlap / 60000;
-          hasCompletedNight = true;
-        }
+      const nightOverlap = Math.max(0, Math.min(end.getTime(), nightEnd.getTime()) - Math.max(start.getTime(), nightStart.getTime()));
+      if (session.endTime && nightOverlap > 0) {
+        nightMinutes += nightOverlap / 60000;
+        hasCompletedNight = true;
       }
-      segments.push({ start, end, night, complete: Boolean(session.endTime), title: timeLabel(start) + "–" + timeLabel(end) + (night ? " night sleep" : " nap") });
+      // Split crossing sessions so only the 10 PM–8 AM portion is dark.
+      const boundaries = [start, nightStart, nightEnd, end].filter((boundary) => boundary >= start && boundary <= end);
+      const points = [...new Set(boundaries.map(Number))].sort((a, b) => a - b);
+      for (let index = 0; index < points.length - 1; index++) {
+        const segmentStart = new Date(points[index]);
+        const segmentEnd = new Date(points[index + 1]);
+        const night = segmentStart >= nightStart && segmentStart < nightEnd;
+        segments.push({ start: segmentStart, end: segmentEnd, night, complete: Boolean(session.endTime), title: timeLabel(segmentStart) + "–" + timeLabel(segmentEnd) + (night ? " night sleep" : " daytime sleep") });
+      }
     });
-    const bedtimeCandidates = sessions.filter((session) => session.endTime && session.start >= windowStart && session.start < nightCutoff).sort((a, b) => a.start - b.start);
-    const morningCandidates = sessions.filter((session) => session.endTime && session.start >= nightCutoff && session.start < nightEnd).sort((a, b) => a.start - b.start);
-    const bedtime = bedtimeCandidates[0]?.start || morningCandidates[0]?.start || null;
+    const bedtimeCandidates = sessions.filter((session) => session.endTime && session.start < nightEnd && session.end > nightStart && session.start >= windowStart).sort((a, b) => a.start - b.start);
+    const bedtime = bedtimeCandidates[0]?.start || null;
     const bedtimeMinutes = bedtime ? (bedtime.getTime() - windowStart.getTime()) / 60000 : null;
     return { date, windowStart, windowEnd, segments, totalMinutes, nightMinutes, hasCompletedNight, bedtime, bedtimeMinutes };
   });
@@ -487,7 +497,7 @@ function renderSleepTrends(dayEntries) {
   chart.append(axis);
   const bedtimeSummary = olderBedtime !== null && recentBedtime !== null ? "Bedtime average changed from " + sleepClockText(olderBedtime) + " to " + sleepClockText(recentBedtime) + ". " : "Bedtime trend is still building. ";
   const nightSummary = olderNightSleep !== null && recentNightSleep !== null ? "Night sleep average changed from " + sleepDurationText(olderNightSleep) + " to " + sleepDurationText(recentNightSleep) + ". " : "Night sleep trend is still building. ";
-  $("sleep-trends-description").textContent = "Fourteen completed sleep-day rows, each from 6 PM through the next day at 6 PM" + (isToday ? ", plus today's in-progress row" : "") + ". Dark bars are overnight sleep and pale bars are naps. " + bedtimeSummary + nightSummary + accessibleRows.join(" ");
+  $("sleep-trends-description").textContent = "Fourteen completed sleep-day rows, each from 6 PM through the next day at 6 PM" + (isToday ? ", plus today's in-progress row" : "") + ". Dark bars show sleep from 10 PM to 8 AM; pale bars show sleep outside those hours. " + bedtimeSummary + nightSummary + accessibleRows.join(" ");
 }
 
 function renderSleepAction() {
@@ -548,7 +558,7 @@ function openEntry(type, entry) {
   $("feed-right-minutes").value = entry?.rightMinutes || (entry?.side === "Right" ? entry.duration || "" : "");
   $("feed-legacy-duration").value = entry?.leftMinutes || entry?.rightMinutes || entry?.side !== "Both" ? "" : entry?.duration || "";
   $("feed-legacy-label").hidden = !(entry?.method === "breast" && entry?.side === "Both" && entry?.duration && !entry?.leftMinutes && !entry?.rightMinutes);
-  $("feed-amount").value = entry?.amount || "";
+  $("feed-amount").value = entry?.amount ? bottleOunces(entry.amount) : "";
   $("wet-size").value = entry?.wetSize || "";
   $("stool-size").value = entry?.stoolSize || "";
   $("sleep-end-time").value = entry?.endTime ? localInput(new Date(entry.endTime)) : "";
@@ -577,7 +587,7 @@ function stepsForWizard() {
       const sides = state.values.side === "Both" ? [state.values.startedSide, state.values.startedSide === "Left" ? "Right" : "Left"] : [state.values.side];
       sides.filter(Boolean).forEach((side) => steps.push({ key: `${side.toLowerCase()}Minutes`, title: `Minutes on the ${side.toLowerCase()}?`, kind: "number", label: "Optional", suffix: "min" }));
     } else {
-      steps.push({ key: "amount", title: "How much?", kind: "number", label: "Bottle amount (optional)", suffix: "ml" });
+      steps.push({ key: "amount", title: "How much?", kind: "number", label: "Bottle amount in ounces (optional)", suffix: "oz" });
     }
     steps.push({ key: "details", title: "Anything else?", kind: "details" });
     return steps;
@@ -672,10 +682,10 @@ function renderWizard() {
     const input = document.createElement("input");
     input.type = "number";
     input.id = "wizard-input";
-    input.min = "1";
-    input.max = step.key === "amount" ? "2000" : "300";
-    input.step = "1";
-    input.inputMode = "numeric";
+    input.min = step.key === "amount" ? "0.01" : "1";
+    input.max = step.key === "amount" ? "67.62" : "300";
+    input.step = step.key === "amount" ? "0.01" : "1";
+    input.inputMode = step.key === "amount" ? "decimal" : "numeric";
     input.placeholder = `Enter ${step.suffix}`;
     input.value = wizard.values[step.key] || "";
     label.append(input);
@@ -743,7 +753,7 @@ function buildWizardEntry() {
   if (wizard.category === "feed") {
     const entry = { type: "feed", method: values.method, time: new Date(values.time), person: values.person, note: values.note || "" };
     if (values.method === "bottle") {
-      if (values.amount) entry.amount = Number(values.amount);
+      if (values.amount) entry.amount = bottleMilliliters(values.amount);
     } else {
       entry.side = values.side;
       if (values.side === "Both") entry.startedSide = values.startedSide;
@@ -1249,7 +1259,7 @@ $("entry-form").addEventListener("submit", async (event) => {
       else if (right) entry.side = "Right";
       else entry.side = "";
       if ($("feed-legacy-duration").value) entry.duration = Number($("feed-legacy-duration").value);
-    } else if ($("feed-amount").value) entry.amount = Number($("feed-amount").value);
+    } else if ($("feed-amount").value) entry.amount = bottleMilliliters($("feed-amount").value);
   } else if (["wee", "poo", "both"].includes(type)) {
     if ($("wet-size").value) entry.wetSize = $("wet-size").value;
     if ($("stool-size").value) entry.stoolSize = $("stool-size").value;
