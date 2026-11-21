@@ -1,0 +1,988 @@
+{
+  "version": 1,
+  "game": "Black Ops III: Zombies Chronicles",
+  "players": [
+    "aidan",
+    "rob"
+  ],
+  "status": "research_draft_not_playtested",
+  "source_notes": "Read Context/work/origins-companion/research.md for citations and unresolved conditions.",
+  "semantics": "All requires_all plus one requires_any if present, plus manually confirmed transient conditions. Map access is a manual condition throughout; titles are inventory labels, not final instructions.",
+  "tasks": [
+    {
+      "id": "gen-1",
+      "title": "Activate generator 1",
+      "requires_all": [],
+      "scope": "team",
+      "family": "generators",
+      "conditions": [],
+      "state_kind": "reversible_current_state"
+    },
+    {
+      "id": "gen-2",
+      "title": "Activate generator 2",
+      "requires_all": [],
+      "scope": "team",
+      "family": "generators",
+      "conditions": [],
+      "state_kind": "reversible_current_state"
+    },
+    {
+      "id": "gen-3",
+      "title": "Activate generator 3",
+      "requires_all": [],
+      "scope": "team",
+      "family": "generators",
+      "conditions": [],
+      "state_kind": "reversible_current_state"
+    },
+    {
+      "id": "gen-4",
+      "title": "Activate generator 4",
+      "requires_all": [],
+      "scope": "team",
+      "family": "generators",
+      "conditions": [],
+      "state_kind": "reversible_current_state"
+    },
+    {
+      "id": "gen-5",
+      "title": "Activate generator 5",
+      "requires_all": [],
+      "scope": "team",
+      "family": "generators",
+      "conditions": [],
+      "state_kind": "reversible_current_state"
+    },
+    {
+      "id": "gen-6",
+      "title": "Activate generator 6",
+      "requires_all": [],
+      "scope": "team",
+      "family": "generators",
+      "conditions": [],
+      "state_kind": "reversible_current_state"
+    },
+    {
+      "id": "gramophone",
+      "title": "Collect gramophone",
+      "requires_all": [],
+      "scope": "team",
+      "family": "staff-chamber",
+      "conditions": []
+    },
+    {
+      "id": "common-record",
+      "title": "Collect common record",
+      "requires_all": [],
+      "scope": "team",
+      "family": "staff-chamber",
+      "conditions": []
+    },
+    {
+      "id": "chamber",
+      "title": "Open staff chamber",
+      "requires_all": [
+        "gramophone",
+        "common-record"
+      ],
+      "scope": "team",
+      "family": "staff-chamber",
+      "conditions": []
+    },
+    {
+      "id": "wind-part-1",
+      "title": "Thor",
+      "requires_all": [],
+      "scope": "team",
+      "family": "wind-build",
+      "conditions": [
+        "Matching robot has accessible lit foot"
+      ]
+    },
+    {
+      "id": "wind-part-2",
+      "title": "Odin",
+      "requires_all": [],
+      "scope": "team",
+      "family": "wind-build",
+      "conditions": [
+        "Matching robot has accessible lit foot"
+      ]
+    },
+    {
+      "id": "wind-part-3",
+      "title": "Freya",
+      "requires_all": [],
+      "scope": "team",
+      "family": "wind-build",
+      "conditions": [
+        "Matching robot has accessible lit foot"
+      ]
+    },
+    {
+      "id": "wind-record",
+      "title": "Find wind record",
+      "requires_all": [],
+      "scope": "team",
+      "family": "wind-build",
+      "conditions": []
+    },
+    {
+      "id": "wind-crystal",
+      "title": "Collect wind crystal",
+      "requires_all": [
+        "gramophone",
+        "wind-record"
+      ],
+      "scope": "team",
+      "family": "wind-build",
+      "conditions": [
+        "Matching tunnel accessible"
+      ]
+    },
+    {
+      "id": "wind-built",
+      "title": "Build wind staff",
+      "requires_all": [
+        "chamber",
+        "wind-crystal",
+        "wind-part-1",
+        "wind-part-2",
+        "wind-part-3"
+      ],
+      "scope": "team",
+      "family": "wind-build",
+      "conditions": []
+    },
+    {
+      "id": "wind-trial",
+      "title": "Solve ceiling rings",
+      "requires_all": [
+        "wind-built"
+      ],
+      "scope": "team",
+      "family": "wind-upgrade",
+      "conditions": [
+        "Matching staff held; Crazy Place access"
+      ]
+    },
+    {
+      "id": "wind-surface-1",
+      "title": "Redirect smoke near Generator 4",
+      "requires_all": [
+        "wind-trial"
+      ],
+      "scope": "team",
+      "family": "wind-upgrade",
+      "conditions": []
+    },
+    {
+      "id": "wind-surface-2",
+      "title": "Redirect smoke on Church tank path",
+      "requires_all": [
+        "wind-trial"
+      ],
+      "scope": "team",
+      "family": "wind-upgrade",
+      "conditions": []
+    },
+    {
+      "id": "wind-surface-3",
+      "title": "Redirect smoke near Generator 5",
+      "requires_all": [
+        "wind-trial"
+      ],
+      "scope": "team",
+      "family": "wind-upgrade",
+      "conditions": []
+    },
+    {
+      "id": "wind-orb",
+      "title": "Align rings and shoot wind orb",
+      "requires_all": [
+        "wind-surface-1",
+        "wind-surface-2",
+        "wind-surface-3"
+      ],
+      "scope": "team",
+      "family": "wind-upgrade",
+      "conditions": [
+        "Matching staff held"
+      ]
+    },
+    {
+      "id": "wind-upgraded",
+      "title": "Charge and reclaim wind staff",
+      "requires_all": [
+        "wind-orb"
+      ],
+      "scope": "team",
+      "family": "wind-upgrade",
+      "conditions": []
+    },
+    {
+      "id": "ice-part-1",
+      "title": "Spawn region",
+      "requires_all": [],
+      "scope": "team",
+      "family": "ice-build",
+      "conditions": [
+        "Snowing; shovel available"
+      ]
+    },
+    {
+      "id": "ice-part-2",
+      "title": "Middle region",
+      "requires_all": [],
+      "scope": "team",
+      "family": "ice-build",
+      "conditions": [
+        "Snowing; shovel available"
+      ]
+    },
+    {
+      "id": "ice-part-3",
+      "title": "Church region",
+      "requires_all": [],
+      "scope": "team",
+      "family": "ice-build",
+      "conditions": [
+        "Snowing; shovel available"
+      ]
+    },
+    {
+      "id": "ice-record",
+      "title": "Find ice record",
+      "requires_all": [],
+      "scope": "team",
+      "family": "ice-build",
+      "conditions": []
+    },
+    {
+      "id": "ice-crystal",
+      "title": "Collect ice crystal",
+      "requires_all": [
+        "gramophone",
+        "ice-record"
+      ],
+      "scope": "team",
+      "family": "ice-build",
+      "conditions": [
+        "Matching tunnel accessible"
+      ]
+    },
+    {
+      "id": "ice-built",
+      "title": "Build ice staff",
+      "requires_all": [
+        "chamber",
+        "ice-crystal",
+        "ice-part-1",
+        "ice-part-2",
+        "ice-part-3"
+      ],
+      "scope": "team",
+      "family": "ice-build",
+      "conditions": []
+    },
+    {
+      "id": "ice-trial",
+      "title": "Match ice symbols",
+      "requires_all": [
+        "ice-built"
+      ],
+      "scope": "team",
+      "family": "ice-upgrade",
+      "conditions": [
+        "Matching staff held; Crazy Place access"
+      ]
+    },
+    {
+      "id": "ice-surface-1",
+      "title": "Freeze and shatter grave near Generator 4",
+      "requires_all": [
+        "ice-trial"
+      ],
+      "scope": "team",
+      "family": "ice-upgrade",
+      "conditions": []
+    },
+    {
+      "id": "ice-surface-2",
+      "title": "Freeze and shatter grave on Excavation side",
+      "requires_all": [
+        "ice-trial"
+      ],
+      "scope": "team",
+      "family": "ice-upgrade",
+      "conditions": []
+    },
+    {
+      "id": "ice-surface-3",
+      "title": "Freeze and shatter grave beyond Tank Station",
+      "requires_all": [
+        "ice-trial"
+      ],
+      "scope": "team",
+      "family": "ice-upgrade",
+      "conditions": []
+    },
+    {
+      "id": "ice-orb",
+      "title": "Align rings and shoot ice orb",
+      "requires_all": [
+        "ice-surface-1",
+        "ice-surface-2",
+        "ice-surface-3"
+      ],
+      "scope": "team",
+      "family": "ice-upgrade",
+      "conditions": [
+        "Matching staff held"
+      ]
+    },
+    {
+      "id": "ice-upgraded",
+      "title": "Charge and reclaim ice staff",
+      "requires_all": [
+        "ice-orb"
+      ],
+      "scope": "team",
+      "family": "ice-upgrade",
+      "conditions": []
+    },
+    {
+      "id": "lightning-part-1",
+      "title": "First tank leg",
+      "requires_all": [],
+      "scope": "team",
+      "family": "lightning-build",
+      "conditions": [
+        "Tank access to this jump"
+      ]
+    },
+    {
+      "id": "lightning-part-2",
+      "title": "Excavation jump",
+      "requires_all": [],
+      "scope": "team",
+      "family": "lightning-build",
+      "conditions": [
+        "Tank access to this jump"
+      ]
+    },
+    {
+      "id": "lightning-part-3",
+      "title": "Church jump",
+      "requires_all": [],
+      "scope": "team",
+      "family": "lightning-build",
+      "conditions": [
+        "Tank access to this jump"
+      ]
+    },
+    {
+      "id": "lightning-record",
+      "title": "Find lightning record",
+      "requires_all": [],
+      "scope": "team",
+      "family": "lightning-build",
+      "conditions": []
+    },
+    {
+      "id": "lightning-crystal",
+      "title": "Collect lightning crystal",
+      "requires_all": [
+        "gramophone",
+        "lightning-record"
+      ],
+      "scope": "team",
+      "family": "lightning-build",
+      "conditions": [
+        "Matching tunnel accessible"
+      ]
+    },
+    {
+      "id": "lightning-built",
+      "title": "Build lightning staff",
+      "requires_all": [
+        "chamber",
+        "lightning-crystal",
+        "lightning-part-1",
+        "lightning-part-2",
+        "lightning-part-3"
+      ],
+      "scope": "team",
+      "family": "lightning-build",
+      "conditions": []
+    },
+    {
+      "id": "lightning-trial",
+      "title": "Play keyboard sequence",
+      "requires_all": [
+        "lightning-built"
+      ],
+      "scope": "team",
+      "family": "lightning-upgrade",
+      "conditions": [
+        "Matching staff held; Crazy Place access"
+      ]
+    },
+    {
+      "id": "lightning-switch-1",
+      "title": "Tank Station: down",
+      "requires_all": [],
+      "scope": "team",
+      "family": "lightning-upgrade",
+      "conditions": [],
+      "early_preparation": true
+    },
+    {
+      "id": "lightning-switch-2",
+      "title": "Spawn: left",
+      "requires_all": [],
+      "scope": "team",
+      "family": "lightning-upgrade",
+      "conditions": [],
+      "early_preparation": true
+    },
+    {
+      "id": "lightning-switch-3",
+      "title": "Wind entrance: up",
+      "requires_all": [],
+      "scope": "team",
+      "family": "lightning-upgrade",
+      "conditions": [],
+      "early_preparation": true
+    },
+    {
+      "id": "lightning-switch-4",
+      "title": "Upper Church: up",
+      "requires_all": [],
+      "scope": "team",
+      "family": "lightning-upgrade",
+      "conditions": [],
+      "early_preparation": true
+    },
+    {
+      "id": "lightning-switch-5",
+      "title": "Lower Church: right",
+      "requires_all": [],
+      "scope": "team",
+      "family": "lightning-upgrade",
+      "conditions": [],
+      "early_preparation": true
+    },
+    {
+      "id": "lightning-switch-6",
+      "title": "Generator 5: down",
+      "requires_all": [],
+      "scope": "team",
+      "family": "lightning-upgrade",
+      "conditions": [],
+      "early_preparation": true
+    },
+    {
+      "id": "lightning-switch-7",
+      "title": "Excavation wall: up",
+      "requires_all": [],
+      "scope": "team",
+      "family": "lightning-upgrade",
+      "conditions": [],
+      "early_preparation": true
+    },
+    {
+      "id": "lightning-orb",
+      "title": "Align rings and shoot lightning orb",
+      "requires_all": [
+        "lightning-trial",
+        "lightning-switch-1",
+        "lightning-switch-2",
+        "lightning-switch-3",
+        "lightning-switch-4",
+        "lightning-switch-5",
+        "lightning-switch-6",
+        "lightning-switch-7"
+      ],
+      "scope": "team",
+      "family": "lightning-upgrade",
+      "conditions": [
+        "Matching staff held"
+      ]
+    },
+    {
+      "id": "lightning-upgraded",
+      "title": "Charge and reclaim lightning staff",
+      "requires_all": [
+        "lightning-orb"
+      ],
+      "scope": "team",
+      "family": "lightning-upgrade",
+      "conditions": []
+    },
+    {
+      "id": "fire-part-1",
+      "title": "Generator 6 reward",
+      "requires_all": [
+        "gen-6"
+      ],
+      "scope": "team",
+      "family": "fire-build",
+      "conditions": []
+    },
+    {
+      "id": "fire-part-2",
+      "title": "Glowing plane",
+      "requires_all": [],
+      "scope": "team",
+      "family": "fire-build",
+      "conditions": []
+    },
+    {
+      "id": "fire-part-3",
+      "title": "First Panzer drop",
+      "requires_all": [],
+      "scope": "team",
+      "family": "fire-build",
+      "conditions": []
+    },
+    {
+      "id": "fire-record",
+      "title": "Find fire record",
+      "requires_all": [],
+      "scope": "team",
+      "family": "fire-build",
+      "conditions": []
+    },
+    {
+      "id": "fire-crystal",
+      "title": "Collect fire crystal",
+      "requires_all": [
+        "gramophone",
+        "fire-record"
+      ],
+      "scope": "team",
+      "family": "fire-build",
+      "conditions": [
+        "Matching tunnel accessible"
+      ]
+    },
+    {
+      "id": "fire-built",
+      "title": "Build fire staff",
+      "requires_all": [
+        "chamber",
+        "fire-crystal",
+        "fire-part-1",
+        "fire-part-2",
+        "fire-part-3"
+      ],
+      "scope": "team",
+      "family": "fire-build",
+      "conditions": []
+    },
+    {
+      "id": "fire-trial",
+      "title": "Fill fire cauldrons",
+      "requires_all": [
+        "fire-built"
+      ],
+      "scope": "team",
+      "family": "fire-upgrade",
+      "conditions": [
+        "Matching staff held; Crazy Place access"
+      ]
+    },
+    {
+      "id": "fire-surface-1",
+      "title": "Read Church symbols and ignite matching torches",
+      "requires_all": [
+        "fire-trial"
+      ],
+      "scope": "team",
+      "family": "fire-upgrade",
+      "conditions": []
+    },
+    {
+      "id": "fire-orb",
+      "title": "Align rings and shoot fire orb",
+      "requires_all": [
+        "fire-surface-1"
+      ],
+      "scope": "team",
+      "family": "fire-upgrade",
+      "conditions": [
+        "Matching staff held"
+      ]
+    },
+    {
+      "id": "fire-upgraded",
+      "title": "Charge and reclaim fire staff",
+      "requires_all": [
+        "fire-orb"
+      ],
+      "scope": "team",
+      "family": "fire-upgrade",
+      "conditions": []
+    },
+    {
+      "id": "chest-1",
+      "title": "Fill chest: Generator 4",
+      "requires_all": [],
+      "scope": "team",
+      "family": "fists",
+      "conditions": []
+    },
+    {
+      "id": "chest-2",
+      "title": "Fill chest: Generator 5",
+      "requires_all": [],
+      "scope": "team",
+      "family": "fists",
+      "conditions": []
+    },
+    {
+      "id": "chest-3",
+      "title": "Fill chest: Excavation",
+      "requires_all": [],
+      "scope": "team",
+      "family": "fists",
+      "conditions": []
+    },
+    {
+      "id": "chest-4",
+      "title": "Fill chest: Church approach",
+      "requires_all": [],
+      "scope": "team",
+      "family": "fists",
+      "conditions": []
+    },
+    {
+      "id": "aidan-fists",
+      "title": "Aidan: claim basic fists",
+      "requires_all": [
+        "chest-1",
+        "chest-2",
+        "chest-3",
+        "chest-4"
+      ],
+      "scope": "aidan",
+      "family": "fists",
+      "conditions": []
+    },
+    {
+      "id": "aidan-tablet",
+      "title": "Take tablet",
+      "requires_all": [],
+      "scope": "aidan",
+      "family": "g-strikes",
+      "conditions": []
+    },
+    {
+      "id": "aidan-clean",
+      "title": "Clean tablet with melee kills",
+      "requires_all": [
+        "aidan-tablet"
+      ],
+      "scope": "aidan",
+      "family": "g-strikes",
+      "conditions": []
+    },
+    {
+      "id": "aidan-return",
+      "title": "Return tablet without mud",
+      "requires_all": [
+        "aidan-clean"
+      ],
+      "scope": "aidan",
+      "family": "g-strikes",
+      "conditions": []
+    },
+    {
+      "id": "aidan-strikes",
+      "title": "Finish melee kills and collect G-Strikes",
+      "requires_all": [
+        "aidan-return"
+      ],
+      "scope": "aidan",
+      "family": "g-strikes",
+      "conditions": []
+    },
+    {
+      "id": "rob-fists",
+      "title": "Rob: claim basic fists",
+      "requires_all": [
+        "chest-1",
+        "chest-2",
+        "chest-3",
+        "chest-4"
+      ],
+      "scope": "rob",
+      "family": "fists",
+      "conditions": []
+    },
+    {
+      "id": "rob-tablet",
+      "title": "Take tablet",
+      "requires_all": [],
+      "scope": "rob",
+      "family": "g-strikes",
+      "conditions": []
+    },
+    {
+      "id": "rob-clean",
+      "title": "Clean tablet with melee kills",
+      "requires_all": [
+        "rob-tablet"
+      ],
+      "scope": "rob",
+      "family": "g-strikes",
+      "conditions": []
+    },
+    {
+      "id": "rob-return",
+      "title": "Return tablet without mud",
+      "requires_all": [
+        "rob-clean"
+      ],
+      "scope": "rob",
+      "family": "g-strikes",
+      "conditions": []
+    },
+    {
+      "id": "rob-strikes",
+      "title": "Finish melee kills and collect G-Strikes",
+      "requires_all": [
+        "rob-return"
+      ],
+      "scope": "rob",
+      "family": "g-strikes",
+      "conditions": []
+    },
+    {
+      "id": "drone-brain",
+      "title": "Find Maxis brain",
+      "requires_all": [],
+      "scope": "team",
+      "family": "maxis-drone",
+      "conditions": []
+    },
+    {
+      "id": "drone-rotor",
+      "title": "Find Maxis rotor",
+      "requires_all": [],
+      "scope": "team",
+      "family": "maxis-drone",
+      "conditions": []
+    },
+    {
+      "id": "drone-frame",
+      "title": "Find Maxis frame",
+      "requires_all": [],
+      "scope": "team",
+      "family": "maxis-drone",
+      "conditions": []
+    },
+    {
+      "id": "drone-built",
+      "title": "Build Maxis Drone",
+      "requires_all": [
+        "drone-brain",
+        "drone-rotor",
+        "drone-frame"
+      ],
+      "scope": "team",
+      "family": "maxis-drone",
+      "conditions": []
+    },
+    {
+      "id": "shield",
+      "title": "Build shield",
+      "requires_all": [],
+      "scope": "team",
+      "family": "shield",
+      "conditions": [],
+      "optional": true
+    },
+    {
+      "id": "place-wind",
+      "title": "Place wind staff in Odin",
+      "requires_all": [
+        "wind-upgraded",
+        "ice-upgraded",
+        "lightning-upgraded",
+        "fire-upgraded"
+      ],
+      "scope": "team",
+      "family": "quest-spine",
+      "conditions": [
+        "All six generators currently powered; matching staff available"
+      ]
+    },
+    {
+      "id": "place-ice",
+      "title": "Place ice staff in Freya",
+      "requires_all": [
+        "wind-upgraded",
+        "ice-upgraded",
+        "lightning-upgraded",
+        "fire-upgraded"
+      ],
+      "scope": "team",
+      "family": "quest-spine",
+      "conditions": [
+        "All six generators currently powered; matching staff available"
+      ]
+    },
+    {
+      "id": "place-lightning",
+      "title": "Place lightning staff in Thor",
+      "requires_all": [
+        "wind-upgraded",
+        "ice-upgraded",
+        "lightning-upgraded",
+        "fire-upgraded"
+      ],
+      "scope": "team",
+      "family": "quest-spine",
+      "conditions": [
+        "All six generators currently powered; matching staff available"
+      ]
+    },
+    {
+      "id": "place-fire",
+      "title": "Place fire staff in Excavation",
+      "requires_all": [
+        "wind-upgraded",
+        "ice-upgraded",
+        "lightning-upgraded",
+        "fire-upgraded"
+      ],
+      "scope": "team",
+      "family": "quest-spine",
+      "conditions": [
+        "All six generators currently powered; matching staff available"
+      ]
+    },
+    {
+      "id": "placements",
+      "title": "Confirm staffs returned",
+      "requires_all": [
+        "place-wind",
+        "place-ice",
+        "place-lightning",
+        "place-fire"
+      ],
+      "scope": "team",
+      "family": "quest-spine",
+      "conditions": []
+    },
+    {
+      "id": "seal",
+      "title": "Coordinate robot button and G-Strike",
+      "requires_all": [
+        "placements"
+      ],
+      "scope": "both",
+      "family": "quest-spine",
+      "conditions": [
+        "Thrower actually has G-Strike ammo"
+      ],
+      "requires_any": [
+        "aidan-strikes",
+        "rob-strikes"
+      ],
+      "roles": [
+        "button",
+        "thrower"
+      ]
+    },
+    {
+      "id": "panzers",
+      "title": "Release drone and clear Panzer wave",
+      "requires_all": [
+        "seal",
+        "drone-built"
+      ],
+      "scope": "team",
+      "family": "quest-spine",
+      "conditions": [
+        "Drone available to deploy"
+      ]
+    },
+    {
+      "id": "plane",
+      "title": "Down hidden plane",
+      "requires_all": [
+        "panzers"
+      ],
+      "scope": "team",
+      "family": "quest-spine",
+      "conditions": [
+        "Zombie Blood active"
+      ]
+    },
+    {
+      "id": "pilot",
+      "title": "Kill pilot and recover drone",
+      "requires_all": [
+        "plane"
+      ],
+      "scope": "team",
+      "family": "quest-spine",
+      "conditions": [
+        "Zombie Blood active"
+      ]
+    },
+    {
+      "id": "aidan-iron-fists",
+      "title": "Aidan: earn and collect upgraded fists",
+      "requires_all": [
+        "pilot",
+        "aidan-fists"
+      ],
+      "scope": "aidan",
+      "family": "quest-spine",
+      "conditions": []
+    },
+    {
+      "id": "rob-iron-fists",
+      "title": "Rob: earn and collect upgraded fists",
+      "requires_all": [
+        "pilot",
+        "rob-fists"
+      ],
+      "scope": "rob",
+      "family": "quest-spine",
+      "conditions": []
+    },
+    {
+      "id": "rift",
+      "title": "Deposit four staffs and charge rift",
+      "requires_all": [
+        "aidan-iron-fists",
+        "rob-iron-fists"
+      ],
+      "scope": "both",
+      "family": "quest-spine",
+      "conditions": [
+        "All four staffs deposited in Crazy Place"
+      ]
+    },
+    {
+      "id": "ending",
+      "title": "Deploy recovered drone and interact together",
+      "requires_all": [
+        "rift",
+        "pilot"
+      ],
+      "scope": "both",
+      "family": "quest-spine",
+      "conditions": [
+        "Recovered drone available"
+      ],
+      "ends_match": true
+    }
+  ]
+}

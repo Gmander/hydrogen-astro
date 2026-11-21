@@ -1,0 +1,7 @@
+export const blank=()=>({version:1,done:{},owners:{},roles:{button:'aidan',thrower:'rob'},name:'New run',updated:0});
+export function ready(t,s){return t.requires_all.every(id=>s.done[id])&&(!t.requires_any?.length||t.requires_any.some(id=>s.done[id]))&&(!t.id.startsWith('place-')||[1,2,3,4,5,6].every(i=>s.done['gen-'+i]));}
+export function missing(t,s,tasks){const ids=t.requires_all.filter(id=>!s.done[id]);if(t.requires_any?.length&&!t.requires_any.some(id=>s.done[id]))ids.push(...t.requires_any);if(t.id.startsWith('place-'))for(let i=1;i<=6;i++)if(!s.done['gen-'+i])ids.push('gen-'+i);return [...new Set(ids)].map(id=>tasks.find(t=>t.id===id)?.title||id);}
+export function bucket(card,s,player){if(card.tasks.every(t=>s.done[t.id]))return 'finished';if(card.scope!=='both'&&((card.scope!=='team'&&card.scope!==player)||(s.owners[card.id]&&s.owners[card.id]!==player)))return 'teammate';return card.tasks.some(t=>!s.done[t.id]&&ready(t,s))?'ready':'waiting';}
+export function completeCard(card,state){const s=structuredClone(state);let changed=true;while(changed){changed=false;for(const t of card.tasks)if(!s.done[t.id]&&ready(t,s)){s.done[t.id]=true;changed=true;}}return s;}
+export function canComplete(card,state){return card.tasks.every(t=>completeCard(card,state).done[t.id]);}
+export function conflicts(tasks,state){return tasks.filter(t=>state.done[t.id]&&t.id!=='shield'&&!ready(t,state)&&!t.id.startsWith('place-'));}
