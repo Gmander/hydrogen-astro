@@ -1,3 +1,9 @@
 /aidan/*
   Content-Security-Policy: sandbox allow-scripts allow-popups allow-forms
   X-Robots-Tag: noindex
+
+/training/*
+  Cache-Control: no-store
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://dev-vv5cabcc1j2q74v6.us.auth0.com; frame-src https://dev-vv5cabcc1j2q74v6.us.auth0.com; worker-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
