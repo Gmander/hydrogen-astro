@@ -5060,7 +5060,7 @@ function homeProfile(value, identity) {
   if (!value) return null;
   const config2 = configSchema.parse(JSON.parse(value));
   const member = config2.members.find((m) => "athlete-" + identityKey(m.subject).slice("members/".length) === identity.athleteId);
-  return member ? { name: member.name, equipment: config2.equipment, equipmentSource: "shared_home" } : null;
+  return member ? { name: member.name, equipment: config2.equipment, equipmentSource: "shared_home", synthetic: false } : null;
 }
 
 // integrations/training-companion/node_modules/@netlify/runtime-utils/dist/main.js
