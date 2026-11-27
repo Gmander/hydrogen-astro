@@ -6,3 +6,8 @@
 
 
 .account-controls{display:flex;align-items:center;gap:12px}.sign-in{padding-top:35px}.sign-in h1{margin:20px 0}.sign-in>p{margin:20px 0}.sign-in .card{margin:28px 0}.sign-in .card p{margin:12px 0 20px}.sign-in .actions{flex-wrap:wrap}.sign-in .actions button{flex:1}.sign-in .notice{font-size:14px}@media(max-width:650px){.account-controls{gap:3px;flex-direction:column;align-items:end}.account-controls button{padding:4px 8px;min-height:32px}.sign-in{padding-top:10px}}
+
+/* Exercise library */
+fieldset{border:0;padding:0;margin:0;min-width:0} .exercise-guidance{margin:22px 0;line-height:1.7;overflow-wrap:anywhere}.exercise-images{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px}.exercise-images figure{margin:0}.exercise-images img{width:100%;max-height:360px;object-fit:contain;border-radius:12px;background:#fff}.exercise-images figcaption{font-size:.9rem;margin-top:8px}.exercise-images small{display:block;opacity:.7}.image-thumb{max-width:240px;max-height:180px;object-fit:contain}.exercise-editor textarea{min-height:70px}#library-editor .card{margin:12px 0}#library-search{align-items:end;margin-bottom:24px}#library-search .field{flex:1}details>summary{cursor:pointer;padding:12px 0}.bottom-nav{grid-template-columns:repeat(4,1fr)}
+
+@media(max-width:600px){#library-search{flex-wrap:wrap}#library-search .field{flex:1 0 100%}#library-search button{flex:1}.exercise-images{grid-template-columns:1fr}}

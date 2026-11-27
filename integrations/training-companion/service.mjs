@@ -11,6 +11,7 @@ export class AppError extends Error {
 }
 const fail = (status, code, message) => { throw new AppError(status, code, message); };
 export const identityKey = sub => 'members/' + createHash('sha256').update(JSON.stringify([issuer, sub])).digest('hex');
+const normalizeName = value => value.normalize('NFKC').trim().toLocaleLowerCase('en-US').replace(/\s+/g, ' ');
 const canonical = value => JSON.stringify(value, (_, x) => x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map(k => [k, x[k]])) : x);
 
 export function createVerifier({ key = createRemoteJWKSet(new URL('.well-known/jwks.json', issuer)) } = {}) {
@@ -61,7 +62,7 @@ export function createActivation(store, { verify = createVerifier(), invited = (
 export function createOperations(store) {
   return async (identity, name, input) => {
     if (!Object.hasOwn(schemas, name)) fail(404, 'unknown_operation', 'Unknown workout operation.');
-    const write = ['create_workout', 'update_workout', 'delete_workout'].includes(name);
+    const write = /^(create|update|delete)_/.test(name);
     if (!identity.permissions.has(scopes[0]) || write && !identity.permissions.has(scopes[1])) fail(403, 'insufficient_scope', 'This connection does not have permission for that operation.');
     const parsed = schemas[name].safeParse(input);
     if (!parsed.success) fail(400, 'invalid_arguments', 'Check workout fields, dates, units and revision before saving.');
@@ -70,16 +71,26 @@ export function createOperations(store) {
       const current = await store.get(key);
       if (!current) fail(403, 'account_not_ready', 'Your training account is awaiting setup.');
       const state = current.data;
+      const library = state.exercises ?? {};
+      const libraryOperation = name.endsWith('_exercise') || name === 'search_exercises';
+      const records = libraryOperation ? library : state.workouts;
       const get = id => {
-        if (!Object.hasOwn(state.workouts, id)) fail(404, 'not_found', 'Workout not found.');
-        return state.workouts[id];
+        if (!Object.hasOwn(records, id)) fail(404, 'not_found', 'Record not found.');
+        return records[id];
       };
       if (name === 'get_profile') return { ...state.profile, athleteId: identity.athleteId };
       if (name === 'list_workouts') {
         const rows = Object.values(state.workouts).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || b.id.localeCompare(a.id));
         return { workouts: rows.slice(0, 100), total: rows.length, truncated: rows.length > 100 };
       }
-      if (name === 'get_workout') return get(args.id);
+      if (name === 'search_exercises') {
+        const terms = normalizeName(args.query).split(' ').filter(Boolean);
+        const rows = Object.values(library).filter(e => terms.every(term => normalizeName([e.name,...e.aliases,...e.equipment,...e.muscles].join(' ')).includes(term)))
+          .sort((a,b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+        return { exercises: rows.slice(args.offset,args.offset+args.limit).map(({images,instructions,...e})=>({...e,imageCount:images.length})), total:rows.length,
+          nextOffset: args.offset+args.limit < rows.length ? args.offset+args.limit : null };
+      }
+      if (name === 'get_workout' || name === 'get_exercise') return get(args.id);
       const prior = state.operations[args.operationId];
       if (prior) {
         if (prior.request !== request) fail(409, 'operation_id_conflict', 'This save ID was already used for a different change.');
@@ -87,16 +98,39 @@ export function createOperations(store) {
       }
       const id = args.id ?? randomUUID();
       let revision = 1;
-      if (name !== 'create_workout') {
+      if (!name.startsWith('create_')) {
         const existing = get(id);
         if (existing.revision !== args.expectedRevision) fail(409, 'revision_conflict', 'This workout changed elsewhere. Reload it before editing.');
         revision = existing.revision + 1;
       }
       const savedAt = new Date().toISOString();
       if (name === 'delete_workout') delete state.workouts[id];
-      else state.workouts[id] = { id, revision, ...args.workout, updatedAt: savedAt };
+      else if (libraryOperation) {
+        const proposedNames = [args.exercise.name,...args.exercise.aliases].map(normalizeName);
+        if (new Set(proposedNames).size !== proposedNames.length) fail(400,'duplicate_alias','Use distinct names and aliases.');
+        const duplicate = Object.values(library).find(e => e.id !== id && [e.name,...e.aliases].some(n => proposedNames.includes(normalizeName(n))));
+        if (duplicate) fail(409,'exercise_exists','An exercise already uses that name or alias. Search and reuse it.');
+        state.exercises = library;
+        library[id] = {id,revision,...args.exercise,updatedAt:savedAt};
+      } else {
+        const workout = structuredClone(args.workout);
+        for (const e of workout.exercises) {
+          if (!e.exerciseId) continue;
+          const definition = library[e.exerciseId];
+          if (!definition) fail(404,'not_found','Library exercise not found.');
+          if (e.guidance) {
+            const known = canonical(e.guidance) === canonical(definition) || Object.values(state.workouts).some(w => w.exercises.some(old => old.guidance && canonical(old.guidance) === canonical(e.guidance)));
+            if (!known) fail(409,'guidance_conflict','Guidance changed or is not a saved snapshot. Read the exercise before linking.');
+          } else {
+            if (definition.revision !== e.exerciseRevision) fail(409,'revision_conflict','Library exercise changed. Fetch its latest revision.');
+            e.guidance = structuredClone(definition);
+          }
+          e.name = e.guidance.name;
+        }
+        state.workouts[id] = { id, revision, ...workout, updatedAt: savedAt };
+      }
       const receipt = { operationId: args.operationId, action: name, id, revision, savedAt,
-        ...(name === 'delete_workout' ? { deleted: true } : { workout: state.workouts[id] }) };
+        ...(name === 'delete_workout' ? { deleted: true } : libraryOperation ? {exercise:library[id]} : { workout: state.workouts[id] }) };
       state.operations[args.operationId] = { request, receipt };
       if (Buffer.byteLength(JSON.stringify(state)) > 1_000_000) fail(413, 'account_limit', 'This preview account is full. Existing records are safe; export before adding more.');
       if (await store.put(key, state, current.etag)) return receipt;
@@ -114,21 +148,31 @@ const setSchema = { type: 'object', additionalProperties: false, properties: {
   loadMeaning: { type: 'string', enum: ['per_hand', 'total', 'bodyweight', 'assistance', 'unspecified'] },
   side: { type: 'string', enum: ['both', 'left', 'right', 'per_side', 'unspecified'] },
 } };
+const text = maxLength => ({type:'string',maxLength});
+const names = {type:'array',maxItems:30,items:{type:'string',minLength:1,maxLength:160}};
+const exerciseSchema = {type:'object',additionalProperties:false,required:['name'],properties:{
+ name:{type:'string',minLength:1,maxLength:160},aliases:names,equipment:names,muscles:names,variations:names,instructions:text(6000),
+ images:{type:'array',maxItems:4,items:{type:'object',additionalProperties:false,required:['dataUrl','caption'],properties:{dataUrl:{...text(24000),pattern:'^data:image/(png|jpeg|webp);base64,'},caption:{...text(500),minLength:1},source:text(500)}}},
+}};
+const guidanceSchema = {...exerciseSchema,required:['id','revision','updatedAt','name'],properties:{...exerciseSchema.properties,id:{type:'string',format:'uuid'},revision:{type:'integer',minimum:1},updatedAt:{type:'string',format:'date-time'}}};
 const workoutSchema = { type: 'object', additionalProperties: false, required: ['title', 'date', 'status', 'exercises'], properties: {
   title: { type: 'string', minLength: 1, maxLength: 160 }, date: { type: 'string', format: 'date' },
   status: { type: 'string', enum: ['planned', 'completed'] }, notes: { type: 'string', maxLength: 3000 },
   exercises: { type: 'array', minItems: 1, maxItems: 50, items: { type: 'object', additionalProperties: false, required: ['name', 'sets'], properties: {
+    exerciseId:{type:'string',format:'uuid'},exerciseRevision:{type:'integer',minimum:1},notes:text(3000),guidance:guidanceSchema,
     name: { type: 'string', minLength: 1, maxLength: 160 }, sets: { type: 'array', maxItems: 100, items: setSchema },
   } } },
 } };
 export const tools = Object.keys(schemas).map(name => {
-  const write = ['create_workout', 'update_workout', 'delete_workout'].includes(name);
+  const write = /^(create|update|delete)_/.test(name);
   const properties = {};
-  if (['get_workout', 'update_workout', 'delete_workout'].includes(name)) properties.id = { type: 'string', format: 'uuid' };
+  if (['get_workout', 'update_workout', 'delete_workout','get_exercise','update_exercise'].includes(name)) properties.id = { type: 'string', format: 'uuid' };
   if (write) properties.operationId = { type: 'string', format: 'uuid' };
-  if (['update_workout', 'delete_workout'].includes(name)) properties.expectedRevision = { type: 'integer', minimum: 1 };
+  if (['update_workout', 'delete_workout','update_exercise'].includes(name)) properties.expectedRevision = { type: 'integer', minimum: 1 };
   if (['create_workout', 'update_workout'].includes(name)) properties.workout = workoutSchema;
-  return { name, description: descriptions[name], inputSchema: { type: 'object', additionalProperties: false, properties, required: Object.keys(properties) },
+  if (['create_exercise','update_exercise'].includes(name)) properties.exercise = exerciseSchema;
+  if (name === 'search_exercises') Object.assign(properties,{query:text(160),offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:50}});
+  return { name, description: descriptions[name], inputSchema: { type: 'object', additionalProperties: false, properties, required: name === 'search_exercises' ? [] : Object.keys(properties) },
     annotations: { readOnlyHint: !write, destructiveHint: name === 'delete_workout', idempotentHint: true, openWorldHint: false },
     securitySchemes: [{ type: 'oauth2', scopes: write ? scopes : scopes.slice(0, 1) }] };
 });

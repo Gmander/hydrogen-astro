@@ -27,7 +27,7 @@ async function route(request) {
   const asset = assets.get(url.pathname);
   if (asset && request.method === 'GET') return new Response(await readFile(new URL('./dist/public/training/' + asset[0], import.meta.url)), { headers: {
     'Content-Type': asset[1] + ';charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
-    'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+    'Content-Security-Policy': "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
   } });
   const sessionId = request.headers.get('cookie')?.match(/(?:^|;\s*)rr_preview=([^;]+)/)?.[1];
   if (url.pathname === '/__preview/sign-in' && request.method === 'POST' && request.headers.get('origin') === origin) {

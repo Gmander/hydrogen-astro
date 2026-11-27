@@ -123,9 +123,13 @@ test('SQLite restart preserves records and receipts; seed never overwrites data'
     const who = { athleteId: 'sample-alex', permissions: new Set(scopes) };
     const args = { operationId: randomUUID(), workout: sampleWorkout };
     const first = await createOperations(store)(who, 'create_workout', args);
+    const libraryIntent={operationId:randomUUID(),exercise:{name:'Restart fixture'}};
+    const libraryFirst=await createOperations(store)(who,'create_exercise',libraryIntent);
     store.close(); store = openLocalStore(path); await seedSamples(store);
     const retry = await createOperations(store)(who, 'create_workout', args);
     assert.equal(retry.replayed, true); assert.deepEqual(retry.workout, first.workout);
+    assert.deepEqual((await createOperations(store)(who,'get_exercise',{id:libraryFirst.id})),libraryFirst.exercise);
+    assert.equal((await createOperations(store)(who,'create_exercise',libraryIntent)).replayed,true);
   } finally { store?.close(); await rm(dir, { recursive: true, force: true }); }
 });
 
@@ -149,4 +153,66 @@ test('activation is explicit, invite-only, retry-safe and cannot revive a revoke
   const member = await store.get(identityKey('new-athlete'));
   await store.put(identityKey('new-athlete'), { ...member.data, active: false }, member.etag);
   await assert.rejects(activate(token), e => e.code === 'not_a_member');
+});
+
+
+test('private exercise search, duplicate aliases, revisions, scope and receipt isolation', async t => {
+ const {call,store}=await fixture(t);
+ const before=await store.get('accounts/sample-alex');
+ assert.equal((await call('search_exercises')).data.total,0);
+ assert.deepEqual(await store.get('accounts/sample-alex'),before);
+ const args={operationId:randomUUID(),exercise:{name:'Dumbbell row',aliases:['DB row'],equipment:['Dumbbell'],muscles:['Back'],instructions:'Synthetic form guidance.'}};
+ const receipt=(await call('create_exercise',args,{mcp:true})).data.result.structuredContent;
+ assert.equal(receipt.revision,1);
+ assert.equal((await call('create_exercise',args)).data.replayed,true);
+ const found=(await call('search_exercises',{query:' db ROW ',limit:1})).data;
+ assert.equal(found.total,1);assert.equal(found.exercises[0].id,receipt.id);assert.equal(found.exercises[0].images,undefined);
+ assert.equal((await call('create_exercise',{operationId:randomUUID(),exercise:{name:' DB  ROW '}})).data.code,'exercise_exists');
+ assert.equal((await call('get_exercise',{id:receipt.id},{user:'b'})).status,404);
+ assert.equal((await call('update_exercise',{id:receipt.id,expectedRevision:1,operationId:randomUUID(),exercise:args.exercise},{user:'b'})).status,404);
+ assert.equal((await call('create_exercise',args,{token:await credential('sample-a',{scope:'read:training'})})).status,403);
+ const other=(await call('create_exercise',args,{user:'b'})).data;assert.notEqual(other.id,receipt.id);assert.equal(other.replayed,undefined);
+ const update={id:receipt.id,expectedRevision:1,operationId:randomUUID(),exercise:{...args.exercise,instructions:'Updated synthetic guidance.'}};
+ const concurrent=await Promise.all([call('update_exercise',update),call('update_exercise',{...update,operationId:randomUUID()})]);
+ assert.deepEqual(concurrent.map(r=>r.status).sort(),[200,409]);
+ assert.equal((await call('update_exercise',update)).data.replayed,true);
+ const member=await store.get(identityKey('sample-a'));await store.put(identityKey('sample-a'),{...member.data,active:false},member.etag);
+ assert.equal((await call('create_exercise',args)).status,403);
+});
+
+test('library snapshots and workout-specific notes survive edits, sessions and old clients', async t => {
+ const {call}=await fixture(t);
+ const first=(await call('create_exercise',{operationId:randomUUID(),exercise:{name:'Sample row',instructions:'Original guidance'}})).data;
+ const exercise={name:'Sample row',exerciseId:first.id,exerciseRevision:1,notes:'Slow and controlled for this workout.',sets:sampleWorkout.exercises[0].sets};
+ const plan=(await call('create_workout',{operationId:randomUUID(),workout:{...sampleWorkout,exercises:[exercise]}})).data.workout;
+ assert.equal(plan.exercises[0].guidance.instructions,'Original guidance');
+ await call('update_exercise',{id:first.id,expectedRevision:1,operationId:randomUUID(),exercise:{name:'Sample row',instructions:'New guidance'}});
+ assert.deepEqual((await call('get_workout',{id:plan.id})).data,plan);
+ const {createSession,finishSet,completedWorkout}=await import('../ui/session.js');
+ const session=createSession(plan,'2026-11-27');finishSet(session,session.queue[0].target,Date.now());
+ const completed=completedWorkout(session);assert.equal(completed.exercises[0].notes,exercise.notes);
+ const saved=(await call('create_workout',{operationId:randomUUID(),workout:completed}));assert.equal(saved.status,200);assert.equal(saved.data.workout.exercises[0].guidance.revision,1);
+ const forged=structuredClone(completed);forged.exercises[0].guidance.instructions='Forged';
+ assert.equal((await call('create_workout',{operationId:randomUUID(),workout:forged})).data.code,'guidance_conflict');
+ assert.equal((await call('create_workout',{operationId:randomUUID(),workout:{...sampleWorkout,exercises:[exercise]}})).data.code,'revision_conflict');
+ assert.equal((await call('create_workout',{operationId:randomUUID(),workout:{...sampleWorkout,exercises:[{...exercise,exerciseRevision:2}]}},{user:'b'})).status,404);
+ assert.equal((await call('create_workout',{operationId:randomUUID(),workout:sampleWorkout})).status,200);
+});
+
+test('captioned raster media validation, pagination and MCP discovery are bounded', async t => {
+ const {call,handler,tokens}=await fixture(t);
+ const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
+ const created=(await call('create_exercise',{operationId:randomUUID(),exercise:{name:'Sample image',images:[{dataUrl:png,caption:'Synthetic pixel fixture',source:'Test'}]}})).data;
+ assert.equal((await call('get_exercise',{id:created.id})).data.images[0].dataUrl,png);
+ for(const dataUrl of ['javascript:alert(1)','https://example.com/private.jpg','data:image/svg+xml;base64,PHN2Zz4=','data:image/png;base64,YWJj',png+'A'.repeat(24000)]) {
+  assert.equal((await call('create_exercise',{operationId:randomUUID(),exercise:{name:'Invalid',images:[{dataUrl,caption:'Test'}]}})).status,400);
+ }
+ await call('create_exercise',{operationId:randomUUID(),exercise:{name:'Another sample'}});
+ const page=(await call('search_exercises',{limit:1})).data;assert.equal(page.nextOffset,1);
+ const second=(await call('search_exercises',{limit:1,offset:page.nextOffset})).data;assert.equal(second.nextOffset,null);assert.notEqual(page.exercises[0].id,second.exercises[0].id);
+ const response=await handler(new Request(origin+'/api/training/mcp',{method:'POST',headers:{authorization:tokens.a,'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list'})}));
+ const metadata=(await response.json()).result.tools;assert.equal(metadata.length,10);
+ assert.deepEqual(metadata.find(t=>t.name==='search_exercises').inputSchema.required,[]);
+ assert.equal(metadata.find(t=>t.name==='create_exercise').annotations.readOnlyHint,false);
+ assert.ok(metadata.find(t=>t.name==='create_workout').inputSchema.properties.workout.properties.exercises.items.properties.guidance);
 });

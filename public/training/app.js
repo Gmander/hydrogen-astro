@@ -1,7 +1,205 @@
-// ui/session.js
+// integrations/training-companion/ui/library.js
+function createLibrary({ app: app2, rpc: rpc2, escape: escape2, toast: toast2, navigate: navigate2, render: render2, persist: persist2, addToWorkout }) {
+  let rows = [], total = 0, nextOffset = null, query = "", offset = 0, current = null, draft = null, intent = null, busy2 = false, error2 = "", loaded = false, conflict = false;
+  const blank = () => ({ name: "", aliases: [], equipment: [], muscles: [], instructions: "", variations: [], images: [] });
+  const guidance = (e3) => e3 ? `<div class="exercise-guidance">${e3.instructions ? `<p class="text-note">${escape2(e3.instructions)}</p>` : ""}${e3.equipment?.length ? `<p><strong>Equipment:</strong> ${escape2(e3.equipment.join(", "))}</p>` : ""}${e3.muscles?.length ? `<p><strong>Muscles:</strong> ${escape2(e3.muscles.join(", "))}</p>` : ""}${e3.variations?.length ? `<p><strong>Variations:</strong> ${escape2(e3.variations.join(", "))}</p>` : ""}<div class="exercise-images">${(e3.images ?? []).map((image) => `<figure><img src="${escape2(image.dataUrl)}" alt="${escape2(image.caption)}" loading="lazy"><figcaption>${escape2(image.caption)}${image.source ? `<small>${escape2(image.source)}</small>` : ""}</figcaption></figure>`).join("")}</div></div>` : "";
+  const button = (action, label, id = "") => `<button type="button" class="secondary small" data-library-action="${action}" data-id="${id}">${label}</button>`;
+  const field = (key, label, value, multiline = false) => `<label class="field">${label}${multiline ? `<textarea name="${key}" maxlength="6000" rows="5">${escape2(value)}</textarea>` : `<input name="${key}" value="${escape2(value)}" ${key === "name" ? 'required maxlength="160"' : 'maxlength="3000"'}>`}</label>`;
+  async function search() {
+    const result = await rpc2("search_exercises", { query, offset, limit: 25 });
+    rows = result.exercises;
+    total = result.total;
+    nextOffset = result.nextOffset;
+    loaded = true;
+  }
+  function page(route) {
+    if (route === "library/edit" && draft) return `<div class="narrow"><a class="back" href="#library">\u2190 Exercise library</a><div class="page-heading"><h1>${draft.id ? "Edit exercise" : "Add an exercise"}</h1></div><p class="help">Reusable guidance for your private library. Put workout-specific coaching in your plan.</p><form id="library-editor"><fieldset ${busy2 || intent ? "disabled" : ""}>${field("name", "Exercise name", draft.name)}${field("aliases", "Other names (comma separated)", draft.aliases.join(", "))}${field("equipment", "Equipment (comma separated)", draft.equipment.join(", "))}${field("muscles", "Muscles (comma separated)", draft.muscles.join(", "))}${field("instructions", "Form and instructions", draft.instructions, true)}${field("variations", "Variations (comma separated)", draft.variations.join(", "))}<h2>Instructional images</h2><p class="help">Up to four small images. Uploads are resized for this preview; keep your originals. Add a caption explaining what to look for.</p>${draft.images.map((image, i2) => `<section class="card"><img class="image-thumb" src="${escape2(image.dataUrl)}" alt="${escape2(image.caption)}"><label class="field">Caption<input data-image="${i2}" data-key="caption" value="${escape2(image.caption)}" required maxlength="500"></label><label class="field">Source or credit<input data-image="${i2}" data-key="source" value="${escape2(image.source)}" maxlength="500"></label>${button("remove-image", "Remove image", String(i2))}</section>`).join("")}<label class="field">Add an image<input id="library-image" type="file" accept="image/png,image/jpeg,image/webp" ${draft.images.length >= 4 ? "disabled" : ""}></label></fieldset>${error2 ? `<p class="inline-error" role="alert">${escape2(error2)}</p>` : ""}${conflict ? `<p class="notice">This exercise changed elsewhere. Your draft is kept. Copy any edits you want to keep before reloading.</p>${button("reload", "Discard edits and load latest", draft.id)}` : ""}<div class="actions"><button type="submit" ${busy2 || conflict ? "disabled" : ""}>${busy2 ? "Saving\u2026" : intent ? "Retry same save" : "Save exercise"}</button>${button("discard", "Discard library draft")}</div>${intent ? '<p class="help">An uncertain save is retained. Retry before changing the draft.</p>' : ""}</form></div>`;
+    if (route.startsWith("library/") && current && route === "library/" + current.id) return `<div class="narrow"><a class="back" href="#library">\u2190 Exercise library</a><div class="page-heading"><div><div class="eyebrow">Private exercise \xB7 revision ${current.revision}</div><h1>${escape2(current.name)}</h1><p>${escape2(current.aliases.join(" \xB7 "))}</p></div></div><div class="actions">${button("use", "Add to workout", current.id)}${button("edit", "Edit guidance", current.id)}</div>${guidance(current)}<p class="save-status">Changes here apply to future selections. Saved workouts keep their existing guidance.</p></div>`;
+    return `<div class="page-heading"><div><div class="eyebrow">Your movement collection</div><h1>Exercise library</h1><p>Build once. Reuse and refine as you train.</p></div>${button("new", "\uFF0B New exercise")}</div>${draft ? `<div class="notice">An exercise draft is waiting. ${button("resume", "Continue editing")}</div>` : ""}<form id="library-search" class="actions"><label class="field">Search names, equipment or muscles<input name="query" value="${escape2(query)}" maxlength="160" placeholder="e.g. dumbbell or legs"></label><button type="submit" ${busy2 ? "disabled" : ""}>Search</button>${button("refresh", "Refresh")}</form>${error2 ? `<p class="inline-error" role="alert">${escape2(error2)}</p>` : ""}<p class="help">${loaded ? `${total} matching ${total === 1 ? "exercise" : "exercises"} \xB7 private to your account` : "Open search to load your library."}</p><div class="plan-list">${rows.map((e3) => `<article class="workout-card"><div class="eyebrow">${escape2(e3.equipment.join(" \xB7 ") || "Equipment not specified")}</div><h3>${escape2(e3.name)}</h3><p>${escape2(e3.muscles.join(" \xB7 ") || "Muscles not specified")}</p><div class="actions">${button("view", "View guidance", e3.id)}${button("use", "Add to workout", e3.id)}</div></article>`).join("") || '<div class="empty">No matching exercises yet. Add one here or ask your connected assistant to create it.</div>'}</div><div class="actions">${offset ? button("previous", "\u2190 Previous") : ""}${nextOffset !== null ? button("next", "Next \u2192") : ""}</div>`;
+  }
+  async function hydrate(route) {
+    if (!route.startsWith("library")) return;
+    try {
+      if (route === "library" || route === "library/edit") {
+        if (!loaded) await search();
+      } else current = await rpc2("get_exercise", { id: route.slice(8) });
+    } catch (e3) {
+      error2 = e3.message;
+    }
+    render2();
+  }
+  async function open() {
+    if (busy2) return;
+    busy2 = true;
+    try {
+      if (!loaded) await search();
+      navigate2("library");
+    } catch (e3) {
+      error2 = e3.message;
+    } finally {
+      busy2 = false;
+      render2();
+    }
+  }
+  async function makeDraft(name = "") {
+    if (draft) {
+      toast2("Finish your existing exercise draft first.");
+    } else {
+      draft = { ...blank(), name };
+      intent = null;
+      conflict = false;
+    }
+    persist2();
+    navigate2("library/edit");
+  }
+  function capture(form) {
+    for (const key of ["name", "instructions"]) draft[key] = form.elements[key].value;
+    for (const key of ["aliases", "equipment", "muscles", "variations"]) draft[key] = form.elements[key].value.split(",").map((x2) => x2.trim()).filter(Boolean);
+  }
+  app2.addEventListener("input", (event) => {
+    if (event.target.closest("#library-editor") && draft && !intent && !busy2) {
+      if (event.target.dataset.image !== void 0) draft.images[Number(event.target.dataset.image)][event.target.dataset.key] = event.target.value;
+      else capture(event.target.form);
+      persist2();
+    }
+  });
+  app2.addEventListener("change", async (event) => {
+    if (event.target.id !== "library-image" || busy2 || intent) return;
+    const file = event.target.files[0];
+    if (!file) return;
+    busy2 = true;
+    render2();
+    try {
+      if (file.size > 12e6 || !["image/png", "image/jpeg", "image/webp"].includes(file.type)) throw Error("Choose a PNG, JPEG or WebP smaller than 12 MB.");
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement("canvas");
+      const scale = Math.min(1, 640 / Math.max(bitmap.width, bitmap.height));
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      let dataUrl;
+      for (const quality of [0.8, 0.6, 0.4, 0.2]) {
+        dataUrl = canvas.toDataURL("image/webp", quality);
+        if (dataUrl.length <= 24e3) break;
+      }
+      if (dataUrl.length > 24e3) throw Error("That image is too detailed for the preview limit. Choose a smaller illustration.");
+      draft.images.push({ dataUrl, caption: "", source: "" });
+      persist2();
+    } catch (e3) {
+      error2 = e3.message;
+    } finally {
+      busy2 = false;
+      render2();
+    }
+  });
+  app2.addEventListener("click", async (event) => {
+    const el = event.target.closest("[data-library-action]");
+    if (!el || busy2) return;
+    const { libraryAction: action, id } = el.dataset;
+    error2 = "";
+    busy2 = true;
+    try {
+      if (action === "new") await makeDraft();
+      else if (action === "resume") navigate2("library/edit");
+      else if (action === "discard") {
+        if (intent) throw Error("Retry the pending save before discarding its draft.");
+        draft = null;
+        conflict = false;
+        navigate2("library");
+      } else if (action === "remove-image") {
+        if (!intent) draft.images.splice(Number(id), 1);
+      } else if (action === "refresh" || action === "next" || action === "previous") {
+        offset = action === "next" ? nextOffset : action === "previous" ? Math.max(0, offset - 25) : 0;
+        await search();
+      } else if (action === "reload") {
+        draft = await rpc2("get_exercise", { id });
+        conflict = false;
+      } else {
+        current = await rpc2("get_exercise", { id });
+        if (action === "view") navigate2("library/" + id);
+        if (action === "edit") {
+          if (draft) throw Error("Finish your existing exercise draft first.");
+          draft = structuredClone(current);
+          conflict = false;
+          navigate2("library/edit");
+        }
+        if (action === "use") addToWorkout(current);
+      }
+    } catch (e3) {
+      error2 = e3.message;
+      toast2(e3.message);
+    } finally {
+      busy2 = false;
+      persist2();
+      render2();
+    }
+  });
+  app2.addEventListener("submit", async (event) => {
+    const form = event.target;
+    if (!["library-search", "library-editor"].includes(form.id)) return;
+    event.preventDefault();
+    if (busy2) return;
+    error2 = "";
+    busy2 = true;
+    try {
+      if (form.id === "library-search") {
+        query = new FormData(form).get("query");
+        offset = 0;
+        await search();
+      } else {
+        if (!intent) {
+          capture(form);
+          const { id, revision, updatedAt, ...exercise } = draft;
+          intent = { name: id ? "update_exercise" : "create_exercise", args: { operationId: crypto.randomUUID(), ...id ? { id, expectedRevision: revision } : {}, exercise } };
+          persist2();
+        }
+        render2();
+        const receipt = await rpc2(intent.name, intent.args);
+        current = receipt.exercise;
+        draft = null;
+        intent = null;
+        conflict = false;
+        persist2();
+        await search();
+        navigate2("library/" + current.id);
+        toast2("Exercise saved");
+      }
+    } catch (e3) {
+      error2 = e3.message;
+      if (e3.status && e3.status < 500) {
+        intent = null;
+        conflict = e3.code === "revision_conflict";
+      }
+      toast2(e3.message);
+    } finally {
+      busy2 = false;
+      persist2();
+      render2();
+    }
+  });
+  return { page, guidance, open, hydrate, makeDraft, serialize: () => ({ draft, intent }), restore: (value) => {
+    draft = value?.draft ?? null;
+    intent = value?.intent ?? null;
+  }, clear: () => {
+    error2 = "";
+    conflict = false;
+    rows = [];
+    current = null;
+    draft = null;
+    intent = null;
+    loaded = false;
+    query = "";
+    offset = 0;
+    total = 0;
+    nextOffset = null;
+  }, isBusy: () => busy2 };
+}
+
+// integrations/training-companion/ui/session.js
 var clone = (v2) => JSON.parse(JSON.stringify(v2));
 function createSession(workout, date) {
-  const queue = workout.exercises.flatMap((exercise, ei2) => exercise.sets.map((set, si2) => ({ ei: ei2, si: si2, name: exercise.name, target: clone(set), actual: null, skipped: false })));
+  const queue = workout.exercises.flatMap((exercise, ei2) => exercise.sets.map((set, si2) => ({ ei: ei2, si: si2, name: exercise.name, definition: clone(Object.fromEntries(Object.entries(exercise).filter(([k2]) => k2 !== "sets"))), target: clone(set), actual: null, skipped: false })));
   if (!queue.length) throw Error("Add at least one set before starting.");
   return { title: workout.title, date, notes: "", queue, index: 0, timer: null, restSeconds: 60, timedRestSeconds: 0, autoAdvance: true, sound: true, keepAwake: true, startedAt: (/* @__PURE__ */ new Date()).toISOString(), operationId: crypto.randomUUID(), pending: null };
 }
@@ -65,7 +263,7 @@ function completedWorkout(session2) {
     if (!step.actual) continue;
     let e3 = exercises.find((e4) => e4.ei === step.ei);
     if (!e3) {
-      e3 = { ei: step.ei, name: step.name, sets: [] };
+      e3 = { ...clone(step.definition ?? {}), ei: step.ei, name: step.name, sets: [] };
       exercises.push(e3);
     }
     e3.sets.push(clone(step.actual));
@@ -74,7 +272,7 @@ function completedWorkout(session2) {
   return { title: session2.title, status: "completed", date: session2.date, notes: session2.notes, exercises: exercises.map(({ ei: ei2, ...e3 }) => e3) };
 }
 
-// node_modules/@auth0/auth0-spa-js/dist/auth0-spa-js.production.esm.js
+// integrations/training-companion/node_modules/@auth0/auth0-spa-js/dist/auth0-spa-js.production.esm.js
 function e(e3, t2) {
   var n2 = {};
   for (var o2 in e3) Object.prototype.hasOwnProperty.call(e3, o2) && t2.indexOf(o2) < 0 && (n2[o2] = e3[o2]);
@@ -5737,7 +5935,7 @@ var Mu = class {
   }
 };
 
-// ui/auth.js
+// integrations/training-companion/ui/auth.js
 var config;
 var client;
 async function initializeAuth() {
@@ -5802,7 +6000,7 @@ async function activateAccount() {
   location.replace("/training/");
 }
 
-// ui/client.js
+// integrations/training-companion/ui/client.js
 var $2 = (s2) => document.querySelector(s2);
 var app = $2("#app");
 var escape = (v2) => String(v2 ?? "").replace(/[&<>"']/g, (c2) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c2]);
@@ -5837,6 +6035,17 @@ var toast = (text) => {
   $2("#toast").classList.add("visible");
   toastHandle = setTimeout(() => $2("#toast").classList.remove("visible"), 4500);
 };
+var library = createLibrary({ app, rpc, escape, toast, navigate, render, persist, addToWorkout: (exercise) => {
+  if (builderIntent) throw Error("Retry your pending workout save first.");
+  builder ??= { title: "", date: today(), status: "planned", notes: "", exercises: [] };
+  if (builder.exercises.length >= 50) throw Error("A workout can contain up to 50 exercises.");
+  const entry = { name: exercise.name, exerciseId: exercise.id, exerciseRevision: exercise.revision, guidance: clone(exercise), notes: "", sets: [blankSet()] };
+  const empty = builder.exercises.findIndex((e3) => !e3.name && !e3.exerciseId);
+  if (empty >= 0) builder.exercises[empty] = entry;
+  else builder.exercises.push(entry);
+  persist();
+  navigate("build");
+} });
 async function rpc(name, args = {}) {
   const token = await getToken();
   const response = await fetch("/api/training/operation", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token, ...profile ? { "X-Training-Athlete": profile.athleteId } : {} }, body: JSON.stringify({ name, arguments: args }) });
@@ -5857,7 +6066,7 @@ async function rpc(name, args = {}) {
 function persist() {
   if (!storageKey) return;
   try {
-    localStorage.setItem(storageKey, JSON.stringify({ session, builder, builderIntent }));
+    localStorage.setItem(storageKey, JSON.stringify({ session, builder, builderIntent, library: library.serialize() }));
     storageOK = true;
   } catch {
     storageOK = false;
@@ -5867,6 +6076,7 @@ function loadDraft() {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
     if (saved) {
+      library.restore(saved.library);
       session = saved.session;
       builder = saved.builder;
       builderIntent = saved.builderIntent;
@@ -5905,7 +6115,7 @@ function home() {
   return `${heading("Your training space", "A little stronger,\none session at a time.", "Your workouts, your pace. Everything in one place.", `<span class="date-chip">${(/* @__PURE__ */ new Date()).toLocaleDateString(void 0, { weekday: "short", month: "short", day: "numeric" })}</span>`)}${session ? `<div class="notice"><strong>You have a session in progress.</strong> ${escape(session.title)} \xB7 ${session.queue.filter((s2) => s2.actual).length} sets logged.<div class="actions"><button class="small" data-action="resume">Resume session \u2192</button><button class="small quiet" data-action="discard">Discard draft</button></div></div>` : ""}<div class="dashboard"><section class="hero"><div class="eyebrow">${next ? "Ready when you are" : "Make room for movement"}</div><h2>${escape(next?.title ?? "Your first workout\nstarts here.")}</h2><p>${next ? `${next.exercises.length} exercises \xB7 ${countSets(next)} sets \xB7 ${escape(prettyDate(next.date))}` : "Build a simple plan, or log a workout as you go."}</p><div class="hero-footer"><button data-action="${next ? "detail" : "new"}" ${next ? `data-id="${next.id}"` : ""}>${next ? "Open workout" : "Create a workout"} <span aria-hidden="true">\u2197</span></button><span>${next ? "A plan to follow.\nRoom to adapt." : "Start small.\nMake it yours."}</span></div></section><section class="card companion-card"><div class="orb" aria-hidden="true">\u2733</div><div><h3>Plan it your way.</h3><p>Create a workout here, or ask your connected assistant to make one. Refresh to see its latest changes.</p></div><button class="secondary small" data-action="refresh">Refresh workouts \u21BB</button></section></div><div class="section-heading"><h2>Your workouts</h2><button class="quiet small" data-action="new">\uFF0B New workout</button></div>${builder ? '<div class="notice">An unsaved workout draft is waiting. <button class="quiet small" data-action="builder">Continue editing \u2192</button></div>' : ""}<div class="plan-list">${plans.length ? plans.map(planCard).join("") : '<div class="empty">No plans yet. Add exercises, sets, or timed intervals to build your first one.</div>'}</div><div class="section-heading"><h2>Recently completed</h2><a class="help" href="#history">View history \u2192</a></div>${recent.length ? historyRows(recent.slice(0, 3)) : '<div class="empty">Your completed sessions will appear here.</div>'}`;
 }
 function detail(w2) {
-  return `<div class="narrow"><a class="back" href="#${w2.status === "completed" ? "history" : "workouts"}">\u2190 Back to ${w2.status === "completed" ? "history" : "workouts"}</a>${heading(w2.status === "planned" ? "Your plan" : "Saved session", w2.title, `${prettyDate(w2.date)} \xB7 ${totals(w2)}`)}<div class="actions">${w2.status === "planned" ? `<button data-action="start" data-id="${w2.id}">Start workout \u2192</button><button class="secondary" data-action="edit" data-id="${w2.id}">Edit plan</button>` : `<button data-action="repeat" data-id="${w2.id}">Use as a new plan</button>`}</div>${error()}${w2.exercises.map((e3) => `<section class="card detail-exercise"><h3>${escape(e3.name)}</h3>${e3.sets.length ? e3.sets.map((s2, i2) => `<div class="set-line"><span>Set ${i2 + 1}</span><span>${escape(setText(s2))}</span></div>`).join("") : '<p class="help">No sets in this exercise yet.</p>'}</section>`).join("")}${w2.notes ? `<section class="card detail-exercise"><h3>Notes</h3><p class="help text-note">${escape(w2.notes)}</p></section>` : ""}<p class="save-status">Saved \xB7 revision ${w2.revision}.${w2.status === "planned" ? " Starting a session fetches the latest version of this plan." : ""}</p></div>`;
+  return `<div class="narrow"><a class="back" href="#${w2.status === "completed" ? "history" : "workouts"}">\u2190 Back to ${w2.status === "completed" ? "history" : "workouts"}</a>${heading(w2.status === "planned" ? "Your plan" : "Saved session", w2.title, `${prettyDate(w2.date)} \xB7 ${totals(w2)}`)}<div class="actions">${w2.status === "planned" ? `<button data-action="start" data-id="${w2.id}">Start workout \u2192</button><button class="secondary" data-action="edit" data-id="${w2.id}">Edit plan</button>` : `<button data-action="repeat" data-id="${w2.id}">Use as a new plan</button>`}</div>${error()}${w2.exercises.map((e3) => `<section class="card detail-exercise"><h3>${escape(e3.name)}</h3>${e3.notes ? `<p class="text-note"><strong>This workout:</strong> ${escape(e3.notes)}</p>` : ""}${e3.guidance ? `<details><summary>Form &amp; muscles \xB7 saved guidance</summary>${library.guidance(e3.guidance)}</details>` : `<button class="quiet small" data-action="library-from-workout" data-id="${w2.id}" data-e="${w2.exercises.indexOf(e3)}">Add to exercise library</button>`}${e3.sets.length ? e3.sets.map((s2, i2) => `<div class="set-line"><span>Set ${i2 + 1}</span><span>${escape(setText(s2))}</span></div>`).join("") : '<p class="help">No sets in this exercise yet.</p>'}</section>`).join("")}${w2.notes ? `<section class="card detail-exercise"><h3>Notes</h3><p class="help text-note">${escape(w2.notes)}</p></section>` : ""}<p class="save-status">Saved \xB7 revision ${w2.revision}.${w2.status === "planned" ? " Starting a session fetches the latest version of this plan." : ""}</p></div>`;
 }
 function options(values, selected) {
   return values.map(([v2, label]) => `<option value="${v2}" ${v2 === selected ? "selected" : ""}>${label}</option>`).join("");
@@ -5915,7 +6125,7 @@ function inputField(label, value, attrs = "", type = "number") {
 }
 function builderPage() {
   if (!builder) return "";
-  return `<div class="narrow"><a class="back" href="#workouts">\u2190 Your workouts</a>${heading(builder.id ? "Edit your plan" : "Make it yours", builder.id ? "Fine-tune your workout." : "Build a workout.", "Reps, timed intervals, or a mix. Leave unknown values blank.")}<form id="builder-form">${inputField("Workout name", builder.title, 'name="title" maxlength="160" required placeholder="e.g. Upper body \xB7 at home"', "text")}<div class="form-row">${inputField("Planned date", builder.date, 'name="date" required', "date")}<label class="field">Workout notes<textarea name="notes" maxlength="3000" placeholder="Anything you want to remember">${escape(builder.notes)}</textarea></label></div>${builder.exercises.map((e3, ei2) => `<section class="card exercise-editor"><div class="exercise-title"><input aria-label="Exercise ${ei2 + 1} name" data-e="${ei2}" data-field="name" value="${escape(e3.name)}" maxlength="160" required placeholder="Exercise name"><button type="button" class="quiet small" data-action="remove-exercise" data-e="${ei2}" aria-label="Remove exercise ${ei2 + 1}">\xD7</button></div>${e3.sets.map((s2, si2) => `<div class="set-editor"><div class="set-heading"><span>SET ${si2 + 1}</span><button type="button" class="quiet small" data-action="remove-set" data-e="${ei2}" data-s="${si2}" aria-label="Remove set ${si2 + 1} of exercise ${ei2 + 1}">Remove</button></div><div class="set-fields">${inputField("Reps", s2.reps, `min="0" max="10000" step="1" data-e="${ei2}" data-s="${si2}" data-field="reps" placeholder="\u2014"`)}${inputField("Seconds", s2.seconds, `min="1" max="86400" step="1" data-e="${ei2}" data-s="${si2}" data-field="seconds" placeholder="\u2014"`)}${inputField("Weight", s2.load, `min="0" max="10000" step="any" data-e="${ei2}" data-s="${si2}" data-field="load" placeholder="\u2014"`)}<label class="field">Unit<select data-e="${ei2}" data-s="${si2}" data-field="unit">${options([["", "Not set"], ["lb", "lb"], ["kg", "kg"]], s2.unit ?? "")}</select></label><label class="field">Weight means<select data-e="${ei2}" data-s="${si2}" data-field="loadMeaning">${options([["unspecified", "Not set"], ["per_hand", "Per hand"], ["total", "Total"], ["bodyweight", "Bodyweight"], ["assistance", "Assistance"]], s2.loadMeaning)}</select></label><label class="field">Side<select data-e="${ei2}" data-s="${si2}" data-field="side">${options([["unspecified", "Not set"], ["per_side", "Per side"], ["both", "Both"], ["left", "Left"], ["right", "Right"]], s2.side)}</select></label></div></div>`).join("")}<button type="button" class="secondary small" data-action="add-set" data-e="${ei2}">\uFF0B Add set</button></section>`).join("")}<div class="editor-actions"><button type="button" class="secondary" data-action="add-exercise">\uFF0B Add exercise</button></div><p class="help">Timed intervals use the seconds field. During a session you can choose hands-free transitions and rest lengths. A saved plan is separate from your completed session.</p>${error()}${builderConflict ? '<div class="notice">This plan changed elsewhere. Keep your edits as a new plan, or discard this draft and reload the latest.<div class="actions"><button type="button" data-action="save-copy">Keep as new plan</button><button type="button" class="secondary" data-action="reload-plan">Discard edits & reload</button></div></div>' : ""}<button class="big-button" type="submit" ${busy || builderConflict ? "disabled" : ""}>${busy ? "Saving\u2026" : builderIntent ? "Retry save" : "Save workout plan"}</button><button type="button" class="quiet small" data-action="discard-plan">Discard workout draft</button><p class="save-status">${storageOK ? "Draft saved on this device." : "Device storage unavailable. Keep this page open until saved."}</p>${builderIntent ? '<p class="help">The last save has an uncertain outcome. Retry it before editing so you don\u2019t create a duplicate.</p>' : ""}</form></div>`;
+  return `<div class="narrow"><a class="back" href="#workouts">\u2190 Your workouts</a>${heading(builder.id ? "Edit your plan" : "Make it yours", builder.id ? "Fine-tune your workout." : "Build a workout.", "Reps, timed intervals, or a mix. Leave unknown values blank.")}<form id="builder-form">${inputField("Workout name", builder.title, 'name="title" maxlength="160" required placeholder="e.g. Upper body \xB7 at home"', "text")}<div class="form-row">${inputField("Planned date", builder.date, 'name="date" required', "date")}<label class="field">Workout notes<textarea name="notes" maxlength="3000" placeholder="Anything you want to remember">${escape(builder.notes)}</textarea></label></div>${builder.exercises.map((e3, ei2) => `<section class="card exercise-editor"><div class="exercise-title"><input aria-label="Exercise ${ei2 + 1} name" data-e="${ei2}" data-field="name" value="${escape(e3.name)}" maxlength="160" required placeholder="Exercise name" ${e3.exerciseId ? "readonly" : ""}><button type="button" class="quiet small" data-action="remove-exercise" data-e="${ei2}" aria-label="Remove exercise ${ei2 + 1}">\xD7</button></div>${e3.exerciseId ? `<p class="help">Library exercise \xB7 saved revision ${e3.exerciseRevision} <button type="button" class="quiet small" data-action="refresh-guidance" data-e="${ei2}">Use latest guidance</button></p>` : ""}<label class="field">Notes for this workout<textarea data-e="${ei2}" data-field="notes" maxlength="3000" placeholder="e.g. Slow and controlled">${escape(e3.notes ?? "")}</textarea></label>${e3.sets.map((s2, si2) => `<div class="set-editor"><div class="set-heading"><span>SET ${si2 + 1}</span><button type="button" class="quiet small" data-action="remove-set" data-e="${ei2}" data-s="${si2}" aria-label="Remove set ${si2 + 1} of exercise ${ei2 + 1}">Remove</button></div><div class="set-fields">${inputField("Reps", s2.reps, `min="0" max="10000" step="1" data-e="${ei2}" data-s="${si2}" data-field="reps" placeholder="\u2014"`)}${inputField("Seconds", s2.seconds, `min="1" max="86400" step="1" data-e="${ei2}" data-s="${si2}" data-field="seconds" placeholder="\u2014"`)}${inputField("Weight", s2.load, `min="0" max="10000" step="any" data-e="${ei2}" data-s="${si2}" data-field="load" placeholder="\u2014"`)}<label class="field">Unit<select data-e="${ei2}" data-s="${si2}" data-field="unit">${options([["", "Not set"], ["lb", "lb"], ["kg", "kg"]], s2.unit ?? "")}</select></label><label class="field">Weight means<select data-e="${ei2}" data-s="${si2}" data-field="loadMeaning">${options([["unspecified", "Not set"], ["per_hand", "Per hand"], ["total", "Total"], ["bodyweight", "Bodyweight"], ["assistance", "Assistance"]], s2.loadMeaning)}</select></label><label class="field">Side<select data-e="${ei2}" data-s="${si2}" data-field="side">${options([["unspecified", "Not set"], ["per_side", "Per side"], ["both", "Both"], ["left", "Left"], ["right", "Right"]], s2.side)}</select></label></div></div>`).join("")}<button type="button" class="secondary small" data-action="add-set" data-e="${ei2}">\uFF0B Add set</button></section>`).join("")}<div class="editor-actions"><button type="button" class="secondary" data-action="add-exercise">\uFF0B Add exercise</button><button type="button" class="secondary" data-action="library">Choose from library</button></div><p class="help">Timed intervals use the seconds field. During a session you can choose hands-free transitions and rest lengths. A saved plan is separate from your completed session.</p>${error()}${builderConflict ? '<div class="notice">This plan changed elsewhere. Keep your edits as a new plan, or discard this draft and reload the latest.<div class="actions"><button type="button" data-action="save-copy">Keep as new plan</button><button type="button" class="secondary" data-action="reload-plan">Discard edits & reload</button></div></div>' : ""}<button class="big-button" type="submit" ${busy || builderConflict ? "disabled" : ""}>${busy ? "Saving\u2026" : builderIntent ? "Retry save" : "Save workout plan"}</button><button type="button" class="quiet small" data-action="discard-plan">Discard workout draft</button><p class="save-status">${storageOK ? "Draft saved on this device." : "Device storage unavailable. Keep this page open until saved."}</p>${builderIntent ? '<p class="help">The last save has an uncertain outcome. Retry it before editing so you don\u2019t create a duplicate.</p>' : ""}</form></div>`;
 }
 function previousSet(step) {
   const prior = workouts.filter((w2) => w2.status === "completed").sort((a2, b2) => b2.date.localeCompare(a2.date) || b2.updatedAt.localeCompare(a2.updatedAt));
@@ -5932,7 +6142,7 @@ function sessionPage() {
   const t2 = session.timer, isRest = t2?.kind === "rest";
   const done = session.queue.filter((x2) => x2.actual).length;
   const next = session.queue[session.index + 1];
-  return `<div class="narrow"><div class="session-header"><a class="back" href="#workouts">\u2190 Your workouts</a><span class="pill">${done} / ${session.queue.length} logged</span></div><div class="help">${escape(session.title)}</div><div class="progress-track"><div class="progress-fill" style="width:${session.index / session.queue.length * 100}%"></div></div>${restored ? '<div class="notice">Your session is restored. Any timer is paused; resume when you\u2019re ready.</div>' : ""}${error()}<section class="card session-card ${isRest ? "rest" : ""}"><div class="eyebrow">${isRest ? "A moment to reset" : `Exercise ${step.ei + 1} \xB7 Set ${step.si + 1}`}</div><h1>${isRest ? "Take a breath." : escape(step.name)}</h1><p class="help">${isRest ? `Up next: ${escape(step.name)} \xB7 set ${step.si + 1}` : escape(setText(step.target))}</p>${isRest || step.target.seconds > 0 ? `<div id="timer-value" class="timer" role="timer" aria-label="Time remaining">${formatTime(t2 ? remaining(t2, Date.now()) : step.target.seconds)}</div><p class="timer-label">${isRest ? "Rest remaining" : "Seconds remaining"}</p><div class="actions" style="margin-top:24px">${t2 ? `<button data-action="toggle-timer">${t2.running ? "Pause" : "Resume timer"}</button>${isRest ? '<button class="secondary" data-action="add-rest">\uFF0B 15 sec</button>' : ""}` : '<button data-action="begin-timer">Start interval</button>'}</div>${isRest ? '<button class="quiet small" data-action="skip-rest">Skip rest \u2192</button>' : '<p class="help" style="margin-top:16px">Completing the timer logs this interval\u2019s duration. Reps are left blank.</p>'}` : `<p class="last">Last time \xB7 ${escape(previousSet(step))}</p><form id="set-form"><div class="set-fields">${inputField("Reps completed", step.entry ? step.entry.reps : step.target.reps, 'name="reps" min="0" max="10000" step="1" placeholder="\u2014"')}${inputField("Weight used", step.entry ? step.entry.load : step.target.load, 'name="load" min="0" max="10000" step="any" placeholder="\u2014"')}<label class="field">Unit<select name="unit">${options([["", "Not set"], ["lb", "lb"], ["kg", "kg"]], (step.entry ? step.entry.unit : step.target.unit) ?? "")}</select></label></div><p class="help">${escape(step.target.loadMeaning === "per_hand" ? "Weight is per hand." : step.target.loadMeaning === "total" ? "Weight is total." : "Weight meaning: " + step.target.loadMeaning.replace("_", " "))} Side: ${escape(step.target.side.replace("_", " "))}.</p><button class="big-button" type="submit">Log set ${step.si + 1} \u2713</button></form>`}</section><div class="up-next"><span>Then</span><div><strong>${next ? escape(next.name) + " \xB7 set " + (next.si + 1) : "Review your session"}</strong>${next ? `<p class="help">${escape(setText(next.target))}</p>` : ""}</div></div>${settings()}<p id="wake-status" class="wake">${escape(wakeText)}</p><p class="help">Keep the app open for cues and automatic transitions. Switching apps pauses the timer.</p><div class="session-foot"><button class="quiet" data-action="skip-set">Skip this set</button><button class="quiet" data-action="finish-early">Finish & review</button></div>${!storageOK ? '<p class="storage-warning help">Device storage is unavailable; keep this page open until your session is saved.</p>' : ""}</div>`;
+  return `<div class="narrow"><div class="session-header"><a class="back" href="#workouts">\u2190 Your workouts</a><span class="pill">${done} / ${session.queue.length} logged</span></div><div class="help">${escape(session.title)}</div><div class="progress-track"><div class="progress-fill" style="width:${session.index / session.queue.length * 100}%"></div></div>${restored ? '<div class="notice">Your session is restored. Any timer is paused; resume when you\u2019re ready.</div>' : ""}${error()}<section class="card session-card ${isRest ? "rest" : ""}"><div class="eyebrow">${isRest ? "A moment to reset" : `Exercise ${step.ei + 1} \xB7 Set ${step.si + 1}`}</div><h1>${isRest ? "Take a breath." : escape(step.name)}</h1><p class="help">${isRest ? `Up next: ${escape(step.name)} \xB7 set ${step.si + 1}` : escape(setText(step.target))}</p>${!isRest && step.definition?.notes ? `<p class="text-note">${escape(step.definition.notes)}</p>` : ""}${!isRest && step.definition?.guidance ? `<details><summary>Form &amp; muscles</summary>${library.guidance(step.definition.guidance)}</details>` : ""}${isRest || step.target.seconds > 0 ? `<div id="timer-value" class="timer" role="timer" aria-label="Time remaining">${formatTime(t2 ? remaining(t2, Date.now()) : step.target.seconds)}</div><p class="timer-label">${isRest ? "Rest remaining" : "Seconds remaining"}</p><div class="actions" style="margin-top:24px">${t2 ? `<button data-action="toggle-timer">${t2.running ? "Pause" : "Resume timer"}</button>${isRest ? '<button class="secondary" data-action="add-rest">\uFF0B 15 sec</button>' : ""}` : '<button data-action="begin-timer">Start interval</button>'}</div>${isRest ? '<button class="quiet small" data-action="skip-rest">Skip rest \u2192</button>' : '<p class="help" style="margin-top:16px">Completing the timer logs this interval\u2019s duration. Reps are left blank.</p>'}` : `<p class="last">Last time \xB7 ${escape(previousSet(step))}</p><form id="set-form"><div class="set-fields">${inputField("Reps completed", step.entry ? step.entry.reps : step.target.reps, 'name="reps" min="0" max="10000" step="1" placeholder="\u2014"')}${inputField("Weight used", step.entry ? step.entry.load : step.target.load, 'name="load" min="0" max="10000" step="any" placeholder="\u2014"')}<label class="field">Unit<select name="unit">${options([["", "Not set"], ["lb", "lb"], ["kg", "kg"]], (step.entry ? step.entry.unit : step.target.unit) ?? "")}</select></label></div><p class="help">${escape(step.target.loadMeaning === "per_hand" ? "Weight is per hand." : step.target.loadMeaning === "total" ? "Weight is total." : "Weight meaning: " + step.target.loadMeaning.replace("_", " "))} Side: ${escape(step.target.side.replace("_", " "))}.</p><button class="big-button" type="submit">Log set ${step.si + 1} \u2713</button></form>`}</section><div class="up-next"><span>Then</span><div><strong>${next ? escape(next.name) + " \xB7 set " + (next.si + 1) : "Review your session"}</strong>${next ? `<p class="help">${escape(setText(next.target))}</p>` : ""}</div></div>${settings()}<p id="wake-status" class="wake">${escape(wakeText)}</p><p class="help">Keep the app open for cues and automatic transitions. Switching apps pauses the timer.</p><div class="session-foot"><button class="quiet" data-action="skip-set">Skip this set</button><button class="quiet" data-action="finish-early">Finish & review</button></div>${!storageOK ? '<p class="storage-warning help">Device storage is unavailable; keep this page open until your session is saved.</p>' : ""}</div>`;
 }
 function settings() {
   return `<details class="settings"><summary>Session settings</summary><label class="toggle">Auto-start the next timed interval<input type="checkbox" data-setting="autoAdvance" ${session.autoAdvance ? "checked" : ""}></label><label class="toggle">Sound cues<input type="checkbox" data-setting="sound" ${session.sound ? "checked" : ""}></label><label class="toggle">Keep screen awake<input type="checkbox" data-setting="keepAwake" ${session.keepAwake ? "checked" : ""}></label><div class="form-row">${inputField("Rest after rep-based sets", session.restSeconds, 'data-setting="restSeconds" min="0" max="600" step="1"')}${inputField("Rest after timed intervals", session.timedRestSeconds, 'data-setting="timedRestSeconds" min="0" max="600" step="1"')}</div><p class="help">Rest is in seconds. Set timed rest to 0 for back-to-back intervals. These settings apply to this session.</p></details>`;
@@ -5947,7 +6157,8 @@ function render() {
   document.querySelectorAll("[data-nav]").forEach((a2) => a2.classList.toggle("active", a2.dataset.nav === route));
   if (!profile) return;
   let html;
-  if (route === "build") html = builderPage() || home();
+  if (route.startsWith("library")) html = library.page(route);
+  else if (route === "build") html = builderPage() || home();
   else if (route === "session") html = sessionPage();
   else if (route === "review") html = reviewPage() || home();
   else if (route.startsWith("workout/")) {
@@ -6058,7 +6269,16 @@ app.addEventListener("click", async (event) => {
   const { action, id, e: e3, s: s2 } = button.dataset;
   errorText = "";
   try {
-    if (action === "detail") navigate("workout/" + id);
+    if (action === "library") await library.open();
+    else if (action === "library-from-workout") {
+      await library.makeDraft(workouts.find((w2) => w2.id === id).exercises[Number(e3)].name);
+    } else if (action === "refresh-guidance") {
+      const entry = builder.exercises[e3];
+      const fresh = await rpc("get_exercise", { id: entry.exerciseId });
+      entry.name = fresh.name;
+      entry.exerciseRevision = fresh.revision;
+      entry.guidance = fresh;
+    } else if (action === "detail") navigate("workout/" + id);
     else if (action === "refresh") {
       busy = true;
       button.disabled = true;
@@ -6178,6 +6398,7 @@ app.addEventListener("change", async (event) => {
   await syncWake();
 });
 app.addEventListener("submit", async (event) => {
+  if (event.target.id.startsWith("library-")) return;
   event.preventDefault();
   if (busy) return;
   errorText = "";
@@ -6246,6 +6467,7 @@ window.addEventListener("hashchange", () => {
     persist();
   }
   errorText = "";
+  library.hydrate(location.hash.slice(1));
   render();
   window.scrollTo(0, 0);
   syncWake();
@@ -6305,6 +6527,7 @@ async function init() {
     storageKey = "rr-training-draft-v1:" + profile.athleteId;
     loadDraft();
     await refresh();
+    await library.hydrate(location.hash.slice(1));
     render();
     await syncWake();
   } catch (e3) {
@@ -6327,7 +6550,7 @@ async function init() {
   }
 }
 $2("#sign-out").onclick = async () => {
-  if (busy) {
+  if (busy || library.isBusy()) {
     toast("Wait for the current save before signing out.");
     return;
   }
@@ -6338,6 +6561,7 @@ $2("#sign-out").onclick = async () => {
   builderIntent = null;
   profile = null;
   workouts = [];
+  library.clear();
   storageKey = "";
   await syncWake();
   connectionScreen();
@@ -6351,3 +6575,7 @@ window.addEventListener("pageshow", (event) => {
   if (event.persisted) location.reload();
 });
 init();
+document.querySelectorAll('[data-nav="library"]').forEach((link) => link.addEventListener("click", (event) => {
+  event.preventDefault();
+  library.open();
+}));

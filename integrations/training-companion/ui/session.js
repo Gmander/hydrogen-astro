@@ -1,7 +1,7 @@
 // Pure session transitions. Timers pause after suspension; elapsed background time never logs exercise.
 export const clone=v=>JSON.parse(JSON.stringify(v));
 export function createSession(workout,date){
- const queue=workout.exercises.flatMap((exercise,ei)=>exercise.sets.map((set,si)=>({ei,si,name:exercise.name,target:clone(set),actual:null,skipped:false})));
+ const queue=workout.exercises.flatMap((exercise,ei)=>exercise.sets.map((set,si)=>({ei,si,name:exercise.name,definition:clone(Object.fromEntries(Object.entries(exercise).filter(([k])=>k!=='sets'))),target:clone(set),actual:null,skipped:false})));
  if(!queue.length)throw Error('Add at least one set before starting.');
  return {title:workout.title,date,notes:'',queue,index:0,timer:null,restSeconds:60,timedRestSeconds:0,autoAdvance:true,sound:true,keepAwake:true,startedAt:new Date().toISOString(),operationId:crypto.randomUUID(),pending:null};
 }
@@ -28,7 +28,7 @@ export function tick(session,now){
  actual.reps=null;finishSet(session,actual,now);return 'set-ended';
 }
 export function completedWorkout(session){
- const exercises=[];for(const step of session.queue){if(!step.actual)continue;let e=exercises.find(e=>e.ei===step.ei);if(!e){e={ei:step.ei,name:step.name,sets:[]};exercises.push(e);}e.sets.push(clone(step.actual));}
+ const exercises=[];for(const step of session.queue){if(!step.actual)continue;let e=exercises.find(e=>e.ei===step.ei);if(!e){e={...clone(step.definition??{}),ei:step.ei,name:step.name,sets:[]};exercises.push(e);}e.sets.push(clone(step.actual));}
  if(!exercises.length)throw Error('Log at least one set before saving a session.');
  return {title:session.title,status:'completed',date:session.date,notes:session.notes,exercises:exercises.map(({ei,...e})=>e)};
 }
