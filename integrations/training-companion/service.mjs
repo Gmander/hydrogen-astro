@@ -59,7 +59,7 @@ export function createActivation(store, { verify = createVerifier(), invited = (
   };
 }
 
-export function createOperations(store) {
+export function createOperations(store, {profileFor=()=>null} = {}) {
   return async (identity, name, input) => {
     if (!Object.hasOwn(schemas, name)) fail(404, 'unknown_operation', 'Unknown workout operation.');
     const write = /^(create|update|delete)_/.test(name);
@@ -78,7 +78,7 @@ export function createOperations(store) {
         if (!Object.hasOwn(records, id)) fail(404, 'not_found', 'Record not found.');
         return records[id];
       };
-      if (name === 'get_profile') return { ...state.profile, athleteId: identity.athleteId };
+      if (name === 'get_profile') return { ...state.profile, ...(profileFor(identity)??{}), athleteId: identity.athleteId };
       if (name === 'list_workouts') {
         const rows = Object.values(state.workouts).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || b.id.localeCompare(a.id));
         return { workouts: rows.slice(0, 100), total: rows.length, truncated: rows.length > 100 };

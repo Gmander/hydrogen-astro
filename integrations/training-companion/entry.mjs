@@ -1,3 +1,4 @@
+import {homeProfile} from './home-profile.mjs';
 import { getStore } from '@netlify/blobs';
 import { createAuthenticator, createOperations, createActivation } from './service.mjs';
 import { createHandler } from './http.mjs';
@@ -10,6 +11,6 @@ const store = {
     return (await blobs().setJSON(key, value, etag === null ? { onlyIfNew: true } : { onlyIfMatch: etag })).modified;
   },
 };
-export default createHandler({ authenticate: createAuthenticator(store), run: createOperations(store),
+export default createHandler({ authenticate: createAuthenticator(store), run: createOperations(store, {profileFor:identity=>homeProfile(process.env.TRAINING_HOME_PROFILE,identity)}),
   activate: createActivation(store, { invited: () => (process.env.TRAINING_INVITED_SUBJECTS ?? '').split(',').map(value => value.trim()).filter(Boolean) }),
   origin: 'https://runtimeready.com', clientId: process.env.TRAINING_AUTH0_CLIENT_ID ?? '' });
