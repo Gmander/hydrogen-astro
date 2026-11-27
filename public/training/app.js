@@ -272,6 +272,57 @@ function completedWorkout(session2) {
   return { title: session2.title, status: "completed", date: session2.date, notes: session2.notes, exercises: exercises.map(({ ei: ei2, ...e3 }) => e3) };
 }
 
+// integrations/training-companion/ui/auth-session.js
+var sessionHintKey = "rr-training-authenticated-tab-v1";
+var recoverable = /* @__PURE__ */ new Set(["login_required", "consent_required", "missing_refresh_token", "interaction_required"]);
+async function restoreSession(client2, { search, hash = "", storage, replace }) {
+  const readHint = () => {
+    try {
+      return storage.getItem(sessionHintKey) === "1";
+    } catch {
+      return false;
+    }
+  };
+  const hint = (value) => {
+    try {
+      if (value) storage.setItem(sessionHintKey, "1");
+      else storage.removeItem(sessionHintKey);
+    } catch {
+    }
+  };
+  const params = new URLSearchParams(search);
+  if (params.has("state") && (params.has("code") || params.has("error"))) {
+    hint(false);
+    let result;
+    try {
+      result = await client2.handleRedirectCallback();
+      await client2.getTokenSilently();
+      hint(true);
+    } finally {
+      const route = result?.appState?.returnHash;
+      replace("/training/" + (typeof route === "string" && /^#[a-zA-Z0-9/_-]*$/.test(route) ? route : ""));
+    }
+    return { redirecting: false };
+  }
+  try {
+    await client2.getTokenSilently();
+    hint(true);
+    return { redirecting: false };
+  } catch (e3) {
+    if (!recoverable.has(e3.error)) throw e3;
+    if (!readHint()) return { redirecting: false };
+    hint(false);
+    await client2.loginWithRedirect({ authorizationParams: { prompt: "none" }, appState: { returnHash: hash } });
+    return { redirecting: true };
+  }
+}
+function clearSessionHint(storage) {
+  try {
+    storage.removeItem(sessionHintKey);
+  } catch {
+  }
+}
+
 // integrations/training-companion/node_modules/@auth0/auth0-spa-js/dist/auth0-spa-js.production.esm.js
 function e(e3, t2) {
   var n2 = {};
@@ -5954,21 +6005,13 @@ async function initializeAuth() {
     workerUrl: "/training/auth0-worker.js",
     authorizationParams: { audience: config.audience, scope: config.scopes, redirect_uri: location.origin + "/training/" }
   });
-  const params = new URLSearchParams(location.search);
-  if (params.has("state") && (params.has("code") || params.has("error"))) {
-    try {
-      await client.handleRedirectCallback();
-    } finally {
-      history.replaceState(null, "", "/training/");
-    }
-  } else {
-    try {
-      await client.checkSession();
-    } catch (e3) {
-      if (!["login_required", "consent_required", "missing_refresh_token"].includes(e3.error)) throw e3;
-    }
+  try {
+    const session2 = await restoreSession(client, { search: location.search, hash: location.hash, storage: sessionStorage, replace: (url) => history.replaceState(null, "", url) });
+    return { ...config, ...session2 };
+  } catch (error2) {
+    error2.authConfig = config;
+    throw error2;
   }
-  return config;
 }
 async function getToken() {
   if (config.preview) {
@@ -5986,6 +6029,7 @@ async function signIn(account) {
   } else await client.loginWithRedirect({ authorizationParams: { prompt: "login" } });
 }
 async function signOut() {
+  clearSessionHint(sessionStorage);
   if (config.preview) {
     const response = await fetch("/__preview/sign-out", { method: "POST" });
     if (!response.ok) throw Error("Could not sign out. Try again.");
@@ -5997,7 +6041,7 @@ async function activateAccount() {
   const response = await fetch("/api/training/activate", { method: "POST", headers: { Authorization: "Bearer " + token } });
   const result = await response.json();
   if (!response.ok) throw Error(result.error ?? "Could not create your space.");
-  location.replace("/training/");
+  return result;
 }
 
 // integrations/training-companion/ui/client.js
@@ -6517,20 +6561,25 @@ function connectionScreen(message = "") {
   app.querySelectorAll("[data-login]").forEach((button) => button.onclick = () => signIn(button.dataset.login).catch((e3) => toast(e3.message)));
   if ($2("#sign-in")) $2("#sign-in").onclick = () => signIn().catch((e3) => toast(e3.message));
 }
+async function openAccount() {
+  profile = await rpc("get_profile");
+  $2("#account").textContent = profile.name + " \xB7 private space";
+  $2("#sign-out").hidden = false;
+  storageKey = "rr-training-draft-v1:" + profile.athleteId;
+  loadDraft();
+  await refresh();
+  await library.hydrate(location.hash.slice(1));
+  render();
+  await syncWake();
+}
 async function init() {
   try {
     authConfig = await initializeAuth();
+    if (authConfig.redirecting) return;
     if (authConfig.preview) $2("#preview-banner").hidden = false;
-    profile = await rpc("get_profile");
-    $2("#account").textContent = profile.name + " \xB7 private space";
-    $2("#sign-out").hidden = false;
-    storageKey = "rr-training-draft-v1:" + profile.athleteId;
-    loadDraft();
-    await refresh();
-    await library.hydrate(location.hash.slice(1));
-    render();
-    await syncWake();
+    await openAccount();
   } catch (e3) {
+    authConfig = e3.authConfig ?? authConfig;
     profile = null;
     connectionScreen(e3.status === 401 || ["login_required", "missing_refresh_token"].includes(e3.error) ? "" : e3.message);
     if (e3.code === "not_a_member" && !authConfig?.preview) {
@@ -6540,6 +6589,7 @@ async function init() {
         button.disabled = true;
         try {
           await activateAccount();
+          await openAccount();
         } catch (err) {
           toast(err.message);
           button.disabled = false;

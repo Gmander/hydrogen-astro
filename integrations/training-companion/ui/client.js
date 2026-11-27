@@ -97,11 +97,14 @@ function connectionScreen(message=''){
  app.querySelectorAll('[data-login]').forEach(button=>button.onclick=()=>signIn(button.dataset.login).catch(e=>toast(e.message)));
  if($('#sign-in'))$('#sign-in').onclick=()=>signIn().catch(e=>toast(e.message));
 }
-async function init(){try{
- authConfig=await initializeAuth();if(authConfig.preview)$('#preview-banner').hidden=false;
+async function openAccount(){
  profile=await rpc('get_profile');$('#account').textContent=profile.name+' · private space';$('#sign-out').hidden=false;
  storageKey='rr-training-draft-v1:'+profile.athleteId;loadDraft();await refresh();await library.hydrate(location.hash.slice(1));render();await syncWake();
- }catch(e){profile=null;connectionScreen(e.status===401||['login_required','missing_refresh_token'].includes(e.error)?'':e.message);if(e.code==='not_a_member'&&!authConfig?.preview){const button=document.createElement('button');button.textContent='Create my test training space';button.onclick=async()=>{button.disabled=true;try{await activateAccount();}catch(err){toast(err.message);button.disabled=false;}};app.querySelector('.sign-in').append(button);}}}
+}
+async function init(){try{
+ authConfig=await initializeAuth();if(authConfig.redirecting)return;if(authConfig.preview)$('#preview-banner').hidden=false;
+ await openAccount();
+ }catch(e){authConfig=e.authConfig??authConfig;profile=null;connectionScreen(e.status===401||['login_required','missing_refresh_token'].includes(e.error)?'':e.message);if(e.code==='not_a_member'&&!authConfig?.preview){const button=document.createElement('button');button.textContent='Create my test training space';button.onclick=async()=>{button.disabled=true;try{await activateAccount();await openAccount();}catch(err){toast(err.message);button.disabled=false;}};app.querySelector('.sign-in').append(button);}}}
 $('#sign-out').onclick=async()=>{if(busy||library.isBusy()){toast('Wait for the current save before signing out.');return;}if(session)pauseTimer(session,Date.now());persist();session=null;builder=null;builderIntent=null;profile=null;workouts=[];library.clear();storageKey='';await syncWake();connectionScreen();try{await signOut();}catch(e){toast(e.message);}};
 window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
 init();

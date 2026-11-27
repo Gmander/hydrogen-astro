@@ -1,3 +1,4 @@
+import {restoreSession,clearSessionHint} from './auth-session.js';
 import { Auth0Client } from '@auth0/auth0-spa-js';
 let config, client;
 export async function initializeAuth() {
@@ -9,14 +10,10 @@ export async function initializeAuth() {
     workerUrl: '/training/auth0-worker.js',
     authorizationParams: { audience: config.audience, scope: config.scopes, redirect_uri: location.origin + '/training/' },
   });
-  const params = new URLSearchParams(location.search);
-  if (params.has('state') && (params.has('code') || params.has('error'))) {
-    try { await client.handleRedirectCallback(); }
-    finally { history.replaceState(null, '', '/training/'); }
-  } else {
-    try { await client.checkSession(); } catch (e) { if (!['login_required', 'consent_required', 'missing_refresh_token'].includes(e.error)) throw e; }
-  }
-  return config;
+  try {
+    const session = await restoreSession(client, {search:location.search,hash:location.hash,storage:sessionStorage,replace:url=>history.replaceState(null,'',url)});
+    return {...config,...session};
+  } catch (error) { error.authConfig=config; throw error; }
 }
 export async function getToken() {
   if (config.preview) {
@@ -34,6 +31,7 @@ export async function signIn(account) {
   } else await client.loginWithRedirect({ authorizationParams: { prompt: 'login' } });
 }
 export async function signOut() {
+  clearSessionHint(sessionStorage);
   if (config.preview) {
     const response = await fetch('/__preview/sign-out', { method: 'POST' });
     if (!response.ok) throw Error('Could not sign out. Try again.');
@@ -45,5 +43,5 @@ export async function activateAccount() {
   const response = await fetch('/api/training/activate', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
   const result = await response.json();
   if (!response.ok) throw Error(result.error ?? 'Could not create your space.');
-  location.replace('/training/');
+  return result;
 }
