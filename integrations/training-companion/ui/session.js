@@ -17,6 +17,11 @@ export function finishSet(session,actual,now){
  if(rest>0)startTimer(session,'rest',rest,now);
  else if(session.autoAdvance&&next.target.seconds>0)startTimer(session,'exercise',next.target.seconds,now);
 }
+// Skip never records elapsed time or automatically starts the next interval.
+export function skipSet(session){
+ const step=session.queue[session.index];if(!step)return;
+ step.skipped=true;step.actual=null;session.index++;session.timer=null;
+}
 export function afterRest(session,now){session.timer=null;const next=session.queue[session.index];if(session.autoAdvance&&next?.target.seconds>0)startTimer(session,'exercise',next.target.seconds,now);}
 export function tick(session,now){
  const t=session.timer;if(!t?.running)return null;
